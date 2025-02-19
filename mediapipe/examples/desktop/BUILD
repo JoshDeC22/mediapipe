@@ -34,7 +34,6 @@ cc_library(
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
     ],
-    alwayslink=1,
 )
 
 cc_library(

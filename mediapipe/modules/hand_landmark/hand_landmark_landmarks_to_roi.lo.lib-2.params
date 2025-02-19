@@ -1,5 +1,0 @@
-/nologo
-/OUT:bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/hand_landmark_landmarks_to_roi.lo.lib
-/MACHINE:X64
-bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/_objs/hand_landmark_landmarks_to_roi/hand_landmark_landmarks_to_roi_linked.obj
-/ignore:4221
