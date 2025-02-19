@@ -73,8 +73,7 @@ using ClassificationListProto = mediapipe::ClassificationList;
                                 faceBlendshapesProto:faceBlendshapesProto
                                   poseLandmarksProto:NormalizedLandmarkListFromPacket(
                                                          poseLandmarksPacket)
-                             poseWorldLandmarksProto:LandmarkListFromPacket(
-                                                         poseWorldLandmarksPacket)
+                             poseWorldLandmarksProto:LandmarkListFromPacket(poseLandmarksPacket)
                            poseSegmentationMaskProto:poseSegmentationMaskProto
                               leftHandLandmarksProto:NormalizedLandmarkListFromPacket(
                                                          leftHandLandmarksPacket)

@@ -13,7 +13,6 @@
 #include "absl/container/btree_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/memory/memory.h"
-#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "google/protobuf/message_lite.h"
@@ -24,8 +23,6 @@
 #include "mediapipe/framework/mediapipe_options.pb.h"
 #include "mediapipe/framework/port/any_proto.h"
 #include "mediapipe/framework/port/ret_check.h"
-#include "mediapipe/framework/port/status_builder.h"
-#include "mediapipe/framework/port/status_macros.h"
 #include "mediapipe/framework/stream_handler.pb.h"
 
 namespace mediapipe {
@@ -47,7 +44,7 @@ T& GetWithAutoGrow(std::vector<std::unique_ptr<T>>* vecp, size_t index) {
     vec.resize(index + 1);
   }
   if (vec[index] == nullptr) {
-    vec[index] = std::make_unique<T>();
+    vec[index] = absl::make_unique<T>();
   }
   return *vec[index];
 }
@@ -65,25 +62,26 @@ class TagIndexMap {
     return map_[tag];
   }
 
-  absl::Status Visit(
-      std::function<absl::Status(const TagIndexLocation&, T&)> fun) const {
-    for (auto& tagged : map_) {
+  void Visit(std::function<void(const TagIndexLocation&, const T&)> fun) const {
+    for (const auto& tagged : map_) {
       TagIndexLocation loc{tagged.first, 0, tagged.second.size()};
-      for (int i = 0; i < tagged.second.size(); ++i) {
-        auto* item = tagged.second[i].get();
-        loc.index = i;
-        // If the item is nullptr, it means that the connection vector for
-        // current tag grew by a GetWithAutoGrow() request but hasn't been
-        // populated yet.
-        if (item != nullptr) {
-          MP_RETURN_IF_ERROR(fun(loc, *item));
-        }
+      for (const auto& item : tagged.second) {
+        fun(loc, *item);
+        ++loc.index;
       }
     }
-    return absl::OkStatus();
   }
 
- private:
+  void Visit(std::function<void(const TagIndexLocation&, T*)> fun) {
+    for (auto& tagged : map_) {
+      TagIndexLocation loc{tagged.first, 0, tagged.second.size()};
+      for (auto& item : tagged.second) {
+        fun(loc, item.get());
+        ++loc.index;
+      }
+    }
+  }
+
   // Note: entries are held by a unique_ptr to ensure pointers remain valid.
   // Should use absl::flat_hash_map but ordering keys for now.
   absl::btree_map<std::string, std::vector<std::unique_ptr<T>>> map_;
@@ -232,8 +230,6 @@ class SourceImpl {
     return !(*this == other);
   }
 
-  const std::string& Name() const { return base_->name_; }
-
   Src& SetName(const char* name) {
     base_->name_ = std::string(name);
     return *this;
@@ -311,18 +307,18 @@ using SideSource = SourceImpl<true, T>;
 //   parts utility/convenience functions or classes.
 //
 // For example:
-//   SidePacket<TfLiteModelPtr> GetModel(SidePacket<Resource> model_resource,
+//   SidePacket<TfLiteModelPtr> GetModel(SidePacket<std::string> model_blob,
 //                                       Graph& graph) {
 //     auto& model_node = graph.AddNode("TfLiteModelCalculator");
-//     model_resource >> model_node.SideIn("MODEL_RESOURCE");
+//     model_blob >> model_node.SideIn("MODEL_BLOB");
 //     return model_node.SideOut("MODEL").Cast<TfLiteModelPtr>();
 //   }
 //
 // Where graph can use it as:
 //   Graph graph;
-//   SidePacket<Resource> model_resource =
-//     graph.SideIn("MODEL_RESOURCE").Cast<Resource>();
-//   SidePacket<TfLiteModelPtr> model = GetModel(model_resource, graph);
+//   SidePacket<std::string> model_blob =
+//     graph.SideIn("MODEL_BLOB").Cast<std::string>();
+//   SidePacket<TfLiteModelPtr> model = GetModel(model_blob, graph);
 template <typename T>
 using SidePacket = SideSource<T>;
 
@@ -861,7 +857,7 @@ class Graph {
       }
     }
 
-    ABSL_CHECK_OK(FixUnnamedConnections());
+    FixUnnamedConnections();
     ABSL_CHECK_OK(UpdateBoundaryConfig(&config));
     for (const std::unique_ptr<NodeBase>& node : nodes_) {
       auto* out_node = config.add_node();
@@ -875,41 +871,32 @@ class Graph {
   }
 
  private:
-  absl::Status FixUnnamedConnections(NodeBase* node, int* unnamed_count) {
-    MP_RETURN_IF_ERROR(node->out_streams_.Visit(
-        [&](const TagIndexLocation& loc, SourceBase& source) -> absl::Status {
-          if (source.name_.empty()) {
-            source.name_ = absl::StrCat("__stream_", (*unnamed_count)++);
-          }
-          return absl::OkStatus();
-        }));
-
-    MP_RETURN_IF_ERROR(node->out_sides_.Visit(
-        [&](const TagIndexLocation& loc, SourceBase& source) -> absl::Status {
-          if (source.name_.empty()) {
-            source.name_ = absl::StrCat("__side_packet_", (*unnamed_count)++);
-          }
-          return absl::OkStatus();
-        }));
-    return absl::OkStatus();
+  void FixUnnamedConnections(NodeBase* node, int* unnamed_count) {
+    node->out_streams_.Visit([&](const TagIndexLocation&, SourceBase* source) {
+      if (source->name_.empty()) {
+        source->name_ = absl::StrCat("__stream_", (*unnamed_count)++);
+      }
+    });
+    node->out_sides_.Visit([&](const TagIndexLocation&, SourceBase* source) {
+      if (source->name_.empty()) {
+        source->name_ = absl::StrCat("__side_packet_", (*unnamed_count)++);
+      }
+    });
   }
 
-  absl::Status FixUnnamedConnections() {
+  void FixUnnamedConnections() {
     int unnamed_count = 0;
-    MP_RETURN_IF_ERROR(FixUnnamedConnections(&graph_boundary_, &unnamed_count));
+    FixUnnamedConnections(&graph_boundary_, &unnamed_count);
     for (std::unique_ptr<NodeBase>& node : nodes_) {
-      MP_RETURN_IF_ERROR(FixUnnamedConnections(node.get(), &unnamed_count));
+      FixUnnamedConnections(node.get(), &unnamed_count);
     }
     for (std::unique_ptr<PacketGenerator>& node : packet_gens_) {
-      MP_RETURN_IF_ERROR(node->out_sides_.Visit(
-          [&](const TagIndexLocation& loc, SourceBase& source) -> absl::Status {
-            if (source.name_.empty()) {
-              source.name_ = absl::StrCat("__side_packet_", unnamed_count++);
-            }
-            return absl::OkStatus();
-          }));
+      node->out_sides_.Visit([&](const TagIndexLocation&, SourceBase* source) {
+        if (source->name_.empty()) {
+          source->name_ = absl::StrCat("__side_packet_", unnamed_count++);
+        }
+      });
     }
-    return absl::OkStatus();
   }
 
   std::string TaggedName(const TagIndexLocation& loc, absl::string_view name) {
@@ -930,39 +917,24 @@ class Graph {
   absl::Status UpdateNodeConfig(const NodeBase& node,
                                 CalculatorGraphConfig::Node* config) {
     config->set_calculator(node.type_);
-    MP_RETURN_IF_ERROR(node.in_streams_.Visit(
-        [&](const TagIndexLocation& loc,
-            const DestinationBase& endpoint) -> absl::Status {
-          RET_CHECK(endpoint.source != nullptr)
-              << node.type_ << ": Missing source for input stream with tag "
-              << (loc.tag.empty() ? "(empty)" : loc.tag) << " at index "
-              << loc.index;
+    node.in_streams_.Visit(
+        [&](const TagIndexLocation& loc, const DestinationBase& endpoint) {
+          ABSL_CHECK(endpoint.source != nullptr);
           config->add_input_stream(TaggedName(loc, endpoint.source->name_));
-          return absl::OkStatus();
-        }));
-    MP_RETURN_IF_ERROR(node.out_streams_.Visit(
-        [&](const TagIndexLocation& loc,
-            const SourceBase& endpoint) -> absl::Status {
+        });
+    node.out_streams_.Visit(
+        [&](const TagIndexLocation& loc, const SourceBase& endpoint) {
           config->add_output_stream(TaggedName(loc, endpoint.name_));
-          return absl::OkStatus();
-        }));
-    MP_RETURN_IF_ERROR(node.in_sides_.Visit(
-        [&](const TagIndexLocation& loc,
-            const DestinationBase& endpoint) -> absl::Status {
-          RET_CHECK(endpoint.source != nullptr)
-              << node.type_
-              << ": Missing source for input side packet stream with tag "
-              << loc.tag << " at index " << loc.index;
-          config->add_input_side_packet(
-              TaggedName(loc, endpoint.source->name_));
-          return absl::OkStatus();
-        }));
-    MP_RETURN_IF_ERROR(
-        node.out_sides_.Visit([&](const TagIndexLocation& loc,
-                                  const SourceBase& endpoint) -> absl::Status {
+        });
+    node.in_sides_.Visit([&](const TagIndexLocation& loc,
+                             const DestinationBase& endpoint) {
+      ABSL_CHECK(endpoint.source != nullptr);
+      config->add_input_side_packet(TaggedName(loc, endpoint.source->name_));
+    });
+    node.out_sides_.Visit(
+        [&](const TagIndexLocation& loc, const SourceBase& endpoint) {
           config->add_output_side_packet(TaggedName(loc, endpoint.name_));
-          return absl::OkStatus();
-        }));
+        });
     if (node.calculator_option_.has_value()) {
       *config->mutable_options() = *node.calculator_option_;
     }
@@ -994,24 +966,15 @@ class Graph {
   absl::Status UpdateNodeConfig(const PacketGenerator& node,
                                 PacketGeneratorConfig* config) {
     config->set_packet_generator(node.type_);
-    MP_RETURN_IF_ERROR(node.in_sides_.Visit(
-        [&](const TagIndexLocation& loc,
-            const DestinationBase& endpoint) -> absl::Status {
-          RET_CHECK(endpoint.source != nullptr)
-              << node.type_
-              << ": Missing source for input side packet stream with tag "
-              << (loc.tag.empty() ? "(empty)" : loc.tag) << " at index "
-              << loc.index;
-          config->add_input_side_packet(
-              TaggedName(loc, endpoint.source->name_));
-          return absl::OkStatus();
-        }));
-    MP_RETURN_IF_ERROR(
-        node.out_sides_.Visit([&](const TagIndexLocation& loc,
-                                  const SourceBase& endpoint) -> absl::Status {
+    node.in_sides_.Visit([&](const TagIndexLocation& loc,
+                             const DestinationBase& endpoint) {
+      ABSL_CHECK(endpoint.source != nullptr);
+      config->add_input_side_packet(TaggedName(loc, endpoint.source->name_));
+    });
+    node.out_sides_.Visit(
+        [&](const TagIndexLocation& loc, const SourceBase& endpoint) {
           config->add_output_side_packet(TaggedName(loc, endpoint.name_));
-          return absl::OkStatus();
-        }));
+        });
     if (node.options_used_) {
       *config->mutable_options() = node.options_;
     }
@@ -1020,43 +983,25 @@ class Graph {
 
   // For special boundary node.
   absl::Status UpdateBoundaryConfig(CalculatorGraphConfig* config) {
-    MP_RETURN_IF_ERROR(graph_boundary_.in_streams_.Visit(
-        [&](const TagIndexLocation& loc,
-            const DestinationBase& endpoint) -> absl::Status {
-          RET_CHECK(endpoint.source != nullptr)
-              << type_ << ": Missing source for graph output stream with tag "
-              << (loc.tag.empty() ? "(empty)" : loc.tag) << " at index "
-              << loc.index;
+    graph_boundary_.in_streams_.Visit(
+        [&](const TagIndexLocation& loc, const DestinationBase& endpoint) {
+          ABSL_CHECK(endpoint.source != nullptr);
           config->add_output_stream(TaggedName(loc, endpoint.source->name_));
-          return absl::OkStatus();
-        }));
-    MP_RETURN_IF_ERROR(graph_boundary_.out_streams_.Visit(
-        [&](const TagIndexLocation& loc,
-            const SourceBase& endpoint) -> absl::Status {
+        });
+    graph_boundary_.out_streams_.Visit(
+        [&](const TagIndexLocation& loc, const SourceBase& endpoint) {
           config->add_input_stream(TaggedName(loc, endpoint.name_));
-          return absl::OkStatus();
-        }));
-    MP_RETURN_IF_ERROR(graph_boundary_.in_sides_.Visit(
-        [&](const TagIndexLocation& loc,
-            const DestinationBase& endpoint) -> absl::Status {
-          RET_CHECK(endpoint.source != nullptr)
-              << type_
-              << ": Missing source for graph output side packet stream with "
-                 "tag "
-              << (loc.tag.empty() ? "(empty)" : loc.tag) << " at index "
-              << loc.index;
-          config->add_output_side_packet(
-              TaggedName(loc, endpoint.source->name_));
-          return absl::OkStatus();
-        }));
-    MP_RETURN_IF_ERROR(graph_boundary_.out_sides_.Visit(
-        [&](const TagIndexLocation& loc,
-            const SourceBase& endpoint) -> absl::Status {
+        });
+    graph_boundary_.in_sides_.Visit([&](const TagIndexLocation& loc,
+                                        const DestinationBase& endpoint) {
+      ABSL_CHECK(endpoint.source != nullptr);
+      config->add_output_side_packet(TaggedName(loc, endpoint.source->name_));
+    });
+    graph_boundary_.out_sides_.Visit(
+        [&](const TagIndexLocation& loc, const SourceBase& endpoint) {
           config->add_input_side_packet(TaggedName(loc, endpoint.name_));
-
-          return absl::OkStatus();
-        }));
-    return absl::OkStatus();
+        });
+    return {};
   }
 
   std::string type_;

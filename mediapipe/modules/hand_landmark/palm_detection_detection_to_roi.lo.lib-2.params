@@ -1,0 +1,5 @@
+/nologo
+/OUT:bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/palm_detection_detection_to_roi.lo.lib
+/MACHINE:X64
+bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/_objs/palm_detection_detection_to_roi/palm_detection_detection_to_roi_linked.obj
+/ignore:4221

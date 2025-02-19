@@ -40,36 +40,16 @@
 }
 
 - (BOOL)loadAudioRecord:(MPPAudioRecord *)audioRecord error:(NSError **)error {
-  if (![self isValidAudioRecordFormat:audioRecord.audioDataFormat error:error]) {
-    return NO;
-  }
-
-  MPPFloatBuffer *audioRecordBuffer = [audioRecord readAtOffset:0
-                                                     withLength:audioRecord.bufferLength
-                                                          error:error];
-  return [self loadRingBufferWithAudioRecordBuffer:audioRecordBuffer error:error];
-}
-
-- (BOOL)isValidAudioRecordFormat:(MPPAudioDataFormat *)format error:(NSError **)error {
-  if (![format isEqual:self.format]) {
+  if (![audioRecord.audioDataFormat isEqual:self.format]) {
     [MPPCommonUtils createCustomError:error
                              withCode:MPPTasksErrorCodeInvalidArgumentError
                           description:@"The provided audio record has incompatible audio format"];
     return NO;
   }
 
-  return YES;
-}
-
-- (BOOL)loadRingBufferWithAudioRecordBuffer:(MPPFloatBuffer *)audioRecordBuffer
-                                      error:(NSError **)error {
-  // Returns `NO` without populating an error since the function that created `audioRecordBuffer` is
-  // expected to populate the error param of the caller (`loadAudioRecord`) which passed into this
-  // function.
-  // For ease of mocking the logic of `loadAudioRecord` in the tests.
-  if (!audioRecordBuffer) {
-    return NO;
-  }
+  MPPFloatBuffer *audioRecordBuffer = [audioRecord readAtOffset:0
+                                                     withLength:audioRecord.bufferLength
+                                                          error:error];
   return [_ringBuffer loadFloatBuffer:audioRecordBuffer
                                offset:0
                                length:audioRecordBuffer.length
@@ -81,7 +61,7 @@
 }
 
 - (NSUInteger)bufferLength {
-  return _ringBuffer.length / _format.channelCount;
+  return _ringBuffer.length;
 }
 
 @end

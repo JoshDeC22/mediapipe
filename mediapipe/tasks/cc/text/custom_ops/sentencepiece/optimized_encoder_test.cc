@@ -34,8 +34,8 @@ namespace mediapipe::tflite_operations::sentencepiece {
 
 namespace internal {
 
-absl::Status TFReadFileToString(const std::string& filepath,
-                                std::string* data) {
+tensorflow::Status TFReadFileToString(const std::string& filepath,
+                                      std::string* data) {
   return tensorflow::ReadFileToString(tensorflow::Env::Default(), filepath,
                                       data);
 }

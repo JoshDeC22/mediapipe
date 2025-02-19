@@ -96,7 +96,7 @@ cc_library(
         "@//mediapipe:ios_arm64": [
             ":opencv_xcframework_device_headers",
         ],
-        # A value from above is chosen arbitrarily.
+        # A value from above is chosen arbitarily.
         "//conditions:default": [
             ":opencv_xcframework_simulator_headers",
         ],

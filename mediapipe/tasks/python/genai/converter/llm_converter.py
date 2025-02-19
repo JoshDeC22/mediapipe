@@ -48,11 +48,6 @@ class ConversionConfig(object):
     lora_output_tflite_file: A string indicating the name of the generated
       tflite file for the LoRA weight. Only applicable when the lora_rank is not
       zero.
-    image_encoder_file: A string with the name of the image encoder tflite file.
-    image_adapter_file: A string with the name of the image adapter tflite file.
-    submodel_type: Name of submodel, e.g. GEMMA_2B.
-    use_fake_weights: Whether to use fake weights. If set to True, the weights
-      will be filled with zeros.
   """
 
   def __init__(
@@ -74,10 +69,6 @@ class ConversionConfig(object):
       lora_ckpt: Optional[str] = None,
       lora_rank: Optional[int] = None,
       lora_output_tflite_file: Optional[str] = None,
-      image_encoder_file: Optional[str] = None,
-      image_adapter_file: Optional[str] = None,
-      submodel_type: Optional[str] = None,
-      use_fake_weights: bool = False,
   ):
     self.input_ckpt = input_ckpt
     self.ckpt_format = ckpt_format
@@ -96,10 +87,6 @@ class ConversionConfig(object):
     self.combine_file_only = combine_file_only
     self.vocab_model_file = vocab_model_file
     self.obfuscate = obfuscate
-    self.image_encoder_file = image_encoder_file
-    self.image_adapter_file = image_adapter_file
-    self.submodel_type = submodel_type
-    self.use_fake_weights = use_fake_weights
     if output_tflite_file:
       parent_dir = os.path.dirname(output_tflite_file)
       if not os.path.isdir(parent_dir):
@@ -121,7 +108,7 @@ class ConversionConfig(object):
     if self.lora_rank is not None:
       if backend == 'cpu':
         raise ValueError('LoRA is not supported for CPU backend.')
-      lora_applicable_models = ['GEMMA_2B', 'GEMMA2_2B', 'PHI_2']
+      lora_applicable_models = ['GEMMA_2B', 'PHI_2']
       if model_type not in lora_applicable_models:
         raise ValueError(
             'LoRA is only applicable for the model_type:'
@@ -221,9 +208,6 @@ def combined_weight_bins_to_tflite(
     lora_rank: Optional[int] = None,
     lora_weight_path: Optional[str] = None,
     lora_output_tflite_file: Optional[str] = None,
-    image_encoder_file: Optional[str] = None,
-    image_adapter_file: Optional[str] = None,
-    submodel_type: Optional[str] = None,
 ):
   """Combines weight files to tflite file."""
   if backend == 'cpu':
@@ -247,9 +231,6 @@ def combined_weight_bins_to_tflite(
         0 if lora_rank is None else lora_rank,
         '' if lora_weight_path is None else lora_weight_path,
         '' if lora_output_tflite_file is None else lora_output_tflite_file,
-        '' if image_encoder_file is None else image_encoder_file,
-        '' if image_adapter_file is None else image_adapter_file,
-        '' if submodel_type is None else submodel_type,
     )
   else:
     raise ValueError('Unsupported backend: %s' % backend)
@@ -259,7 +240,7 @@ def convert_bpe_vocab(vocab_model_file: str, output_dir: str) -> str:
   if not os.path.isdir(vocab_model_file):
     raise ValueError(
         'The input BPE vocab model file path is expected to be a directory that'
-        ' contains both tokenizer.json and tokenizer_config.json files.'
+        ' conatins both tokenizer.json and tokenizer_config.json files.'
     )
   output_vocab_file = os.path.join(output_dir, 'spm.model')
   model_ckpt_util.ConvertHfTokenizer(vocab_model_file, output_vocab_file)
@@ -310,7 +291,7 @@ def maybe_quantize_and_write_tensors_to_bins(
         output_dir=config.output_dir,
         backend=config.backend,
     )
-    writer.write_variables(quantized_tensors, config.use_fake_weights)
+    writer.write_variables(quantized_tensors)
     del quantized_tensors
     del writer
 
@@ -368,7 +349,4 @@ def convert_checkpoint(config: ConversionConfig) -> None:
       lora_rank=config.lora_rank,
       lora_weight_path=config.output_dir,
       lora_output_tflite_file=config.lora_output_tflite_file,
-      image_encoder_file=config.image_encoder_file,
-      image_adapter_file=config.image_adapter_file,
-      submodel_type=config.submodel_type,
   )

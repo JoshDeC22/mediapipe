@@ -14,7 +14,8 @@
 
 """Building MediaPipe Tasks AARs."""
 
-load("@build_bazel_rules_android//android:rules.bzl", "android_binary", "android_library")
+load("@build_bazel_rules_android//android:rules.bzl", "android_library")
+load("//mediapipe/java/com/google/mediapipe:mediapipe_aar.bzl", "mediapipe_build_aar_with_jni", "mediapipe_java_proto_src_extractor", "mediapipe_java_proto_srcs", "mediapipe_logging_java_proto_srcs")
 
 _CORE_TASKS_JAVA_PROTO_LITE_TARGETS = [
     "//mediapipe/gpu:gpu_origin_java_proto_lite",
@@ -90,6 +91,11 @@ _VISION_TASKS_IMAGE_GENERATOR_JAVA_PROTO_LITE_TARGETS = [
 _TEXT_TASKS_JAVA_PROTO_LITE_TARGETS = [
     "//mediapipe/tasks/cc/text/text_classifier/proto:text_classifier_graph_options_java_proto_lite",
     "//mediapipe/tasks/cc/text/text_embedder/proto:text_embedder_graph_options_java_proto_lite",
+]
+
+_GENAI_TASKS_JAVA_PROTO_LITE_TARGETS = [
+    "//mediapipe/tasks/java/com/google/mediapipe/tasks/core/jni/proto:llm_options_java_proto_lite",
+    "//mediapipe/tasks/java/com/google/mediapipe/tasks/core/jni/proto:llm_response_context_java_proto_lite",
 ]
 
 def mediapipe_tasks_core_aar(name, srcs, manifest):
@@ -197,9 +203,9 @@ def mediapipe_tasks_core_aar(name, srcs, manifest):
                    "//mediapipe/java/com/google/mediapipe/framework/image",
                    "//mediapipe/tasks/cc/vision/image_segmenter/calculators:tensors_to_segmentation_calculator_java_proto_lite",
                    "//mediapipe/tasks/java/com/google/mediapipe/tasks/core/jni:model_resources_cache_jni",
+                   "//third_party:androidx_annotation",
                    "//third_party:autovalue",
                    "@com_google_protobuf//:protobuf_javalite",
-                   "@maven//:androidx_annotation_annotation",
                    "@maven//:com_google_guava_guava",
                    "@maven//:com_google_flogger_flogger",
                    "@maven//:com_google_flogger_flogger_system_backend",
@@ -217,6 +223,39 @@ def mediapipe_tasks_core_aar(name, srcs, manifest):
                        "@maven//:com_google_android_datatransport_transport_runtime",
                    ],
                }),
+    )
+
+def mediapipe_tasks_audio_aar(name, srcs, native_library):
+    """Builds medaipipe tasks audio AAR.
+
+    Args:
+      name: The bazel target name.
+      srcs: MediaPipe Audio Tasks' source files.
+      native_library: The native library that contains audio tasks' graph and calculators.
+    """
+
+    native.genrule(
+        name = name + "tasks_manifest_generator",
+        outs = ["AndroidManifest.xml"],
+        cmd = """
+cat > $(OUTS) <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.google.mediapipe.tasks.audio">
+    <uses-sdk
+        android:minSdkVersion="24"
+        android:targetSdkVersion="34" />
+</manifest>
+EOF
+""",
+    )
+
+    _mediapipe_tasks_aar(
+        name = name,
+        srcs = srcs,
+        manifest = "AndroidManifest.xml",
+        java_proto_lite_targets = _CORE_TASKS_JAVA_PROTO_LITE_TARGETS + _AUDIO_TASKS_JAVA_PROTO_LITE_TARGETS,
+        native_library = native_library,
     )
 
 def mediapipe_tasks_vision_aar(name, srcs, native_library):
@@ -286,56 +325,152 @@ EOF
         native_library = native_library,
     )
 
+def mediapipe_tasks_text_aar(name, srcs, native_library):
+    """Builds medaipipe tasks text AAR.
+
+    Args:
+      name: The bazel target name.
+      srcs: MediaPipe Text Tasks' source files.
+      native_library: The native library that contains text tasks' graph and calculators.
+    """
+
+    native.genrule(
+        name = name + "tasks_manifest_generator",
+        outs = ["AndroidManifest.xml"],
+        cmd = """
+cat > $(OUTS) <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.google.mediapipe.tasks.text">
+    <uses-sdk
+        android:minSdkVersion="24"
+        android:targetSdkVersion="34" />
+</manifest>
+EOF
+""",
+    )
+
+    _mediapipe_tasks_aar(
+        name = name,
+        srcs = srcs,
+        manifest = "AndroidManifest.xml",
+        java_proto_lite_targets = _CORE_TASKS_JAVA_PROTO_LITE_TARGETS + _TEXT_TASKS_JAVA_PROTO_LITE_TARGETS,
+        native_library = native_library,
+    )
+
+def mediapipe_tasks_genai_aar(name, srcs, native_library):
+    """Builds medaipipe tasks text text generator AAR.
+
+    Args:
+      name: The bazel target name.
+      srcs: MediaPipe Text Generator Tasks' source files.
+      native_library: The native library that contains text generator task's graph and calculators.
+    """
+
+    native.genrule(
+        name = name + "tasks_manifest_generator",
+        outs = ["AndroidManifest.xml"],
+        cmd = """
+cat > $(OUTS) <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.google.mediapipe.tasks.genai">
+    <uses-sdk
+        android:minSdkVersion="24"
+        android:targetSdkVersion="34" />
+</manifest>
+EOF
+""",
+    )
+
+    mediapipe_genai_java_proto_srcs = []
+    mediapipe_genai_java_proto_srcs.append(mediapipe_java_proto_src_extractor(
+        target = "//mediapipe/tasks/java/com/google/mediapipe/tasks/core/jni/proto:llm_options_java_proto_lite",
+        src_out = "com/google/mediapipe/tasks/core/jni/proto/LlmOptionsProto.java",
+    ))
+
+    mediapipe_genai_java_proto_srcs.append(mediapipe_java_proto_src_extractor(
+        target = "//mediapipe/tasks/java/com/google/mediapipe/tasks/core/jni/proto:llm_response_context_java_proto_lite",
+        src_out = "com/google/mediapipe/tasks/core/jni/proto/LlmResponseContextProto.java",
+    ))
+
+    _mediapipe_tasks_aar(
+        name = name,
+        srcs = srcs + mediapipe_genai_java_proto_srcs,
+        manifest = "AndroidManifest.xml",
+        java_proto_lite_targets = _CORE_TASKS_JAVA_PROTO_LITE_TARGETS + _GENAI_TASKS_JAVA_PROTO_LITE_TARGETS,
+        native_library = native_library,
+    )
+
 def _mediapipe_tasks_aar(name, srcs, manifest, java_proto_lite_targets, native_library):
     """Builds medaipipe tasks AAR."""
-    deps = java_proto_lite_targets + [native_library] + [
-        "//mediapipe/java/com/google/mediapipe/framework:android_framework",
-        "//mediapipe/java/com/google/mediapipe/framework/image",
-        "//mediapipe/framework:calculator_options_java_proto_lite",
-        "//mediapipe/framework:calculator_java_proto_lite",
-        "//mediapipe/framework/formats:classification_java_proto_lite",
-        "//mediapipe/framework/formats:detection_java_proto_lite",
-        "//mediapipe/framework/formats:landmark_java_proto_lite",
-        "//mediapipe/framework/formats:location_data_java_proto_lite",
-        "//mediapipe/framework/formats:matrix_data_java_proto_lite",
-        "//mediapipe/framework/formats:rect_java_proto_lite",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:audiodata",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:detection",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:category",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:classificationresult",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:classifications",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:connection",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:embedding",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:embeddingresult",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:landmark",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:normalizedkeypoint",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:normalized_landmark",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/processors:classifieroptions",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/utils:cosinesimilarity",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/core:logging",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/core",
-        "//mediapipe/util:color_java_proto_lite",
-        "//mediapipe/util:label_map_java_proto_lite",
-        "//mediapipe/util:render_data_java_proto_lite",
-        "//third_party:autovalue",
-        "@maven//:androidx_annotation_annotation",
-        "@maven//:com_google_guava_guava",
-        "@com_google_protobuf//:protobuf_javalite",
-        "//third_party:any_java_proto",
-    ]
 
-    deps += select({
-        "//conditions:default": ["//third_party:android_jni_opencv_cc_lib"],
-        "//mediapipe/framework/port:disable_opencv": [],
-        "//third_party:exclude_opencv_so_lib": [],
-    })
+    # When "--define EXCLUDE_OPENCV_SO_LIB=1" is set in the build command,
+    # the OpenCV so libraries will be excluded from the AAR package to
+    # save the package size.
+    native.config_setting(
+        name = "exclude_opencv_so_lib",
+        define_values = {
+            "EXCLUDE_OPENCV_SO_LIB": "1",
+        },
+        visibility = ["//visibility:public"],
+    )
+
+    native.cc_library(
+        name = name + "_jni_opencv_cc_lib",
+        srcs = select({
+            "//mediapipe:android_arm64": ["@android_opencv//:libopencv_java4_so_arm64-v8a"],
+            "//mediapipe:android_arm": ["@android_opencv//:libopencv_java4_so_armeabi-v7a"],
+            "//mediapipe:android_x86": ["@android_opencv//:libopencv_java4_so_x86"],
+            "//mediapipe:android_x86_64": ["@android_opencv//:libopencv_java4_so_x86_64"],
+            "//conditions:default": [],
+        }),
+        alwayslink = 1,
+    )
 
     android_library(
         name = name + "_android_lib",
         srcs = srcs,
         manifest = manifest,
         proguard_specs = ["//mediapipe/java/com/google/mediapipe/framework:proguard.pgcfg"],
-        deps = deps,
+        deps = java_proto_lite_targets + [native_library] + [
+            "//mediapipe/java/com/google/mediapipe/framework:android_framework",
+            "//mediapipe/java/com/google/mediapipe/framework/image",
+            "//mediapipe/framework:calculator_options_java_proto_lite",
+            "//mediapipe/framework:calculator_java_proto_lite",
+            "//mediapipe/framework/formats:classification_java_proto_lite",
+            "//mediapipe/framework/formats:detection_java_proto_lite",
+            "//mediapipe/framework/formats:landmark_java_proto_lite",
+            "//mediapipe/framework/formats:location_data_java_proto_lite",
+            "//mediapipe/framework/formats:matrix_data_java_proto_lite",
+            "//mediapipe/framework/formats:rect_java_proto_lite",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:audiodata",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:detection",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:category",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:classificationresult",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:classifications",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:connection",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:embedding",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:embeddingresult",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:landmark",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:normalizedkeypoint",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/containers:normalized_landmark",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/processors:classifieroptions",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/components/utils:cosinesimilarity",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/core:logging",
+            "//mediapipe/tasks/java/com/google/mediapipe/tasks/core",
+            "//mediapipe/util:color_java_proto_lite",
+            "//mediapipe/util:label_map_java_proto_lite",
+            "//mediapipe/util:render_data_java_proto_lite",
+            "//third_party:androidx_annotation",
+            "//third_party:autovalue",
+            "@maven//:com_google_guava_guava",
+            "@com_google_protobuf//:protobuf_javalite",
+        ] + select({
+            "//conditions:default": [":" + name + "_jni_opencv_cc_lib"],
+            "//mediapipe/framework/port:disable_opencv": [],
+            "exclude_opencv_so_lib": [],
+        }),
     )
 
     mediapipe_build_aar_with_jni(name, name + "_android_lib")
@@ -347,207 +482,3 @@ def _mediapipe_tasks_java_proto_src_extractor(target):
         target = target,
         src_out = proto_path + proto_name,
     )
-
-def mediapipe_build_aar_with_jni(name, android_library):
-    """Builds MediaPipe AAR with jni.
-
-    Args:
-      name: The bazel target name.
-      android_library: the android library that contains jni.
-    """
-
-    # Generates dummy AndroidManifest.xml for dummy apk usage
-    # (dummy apk is generated by <name>_dummy_app target below)
-    native.genrule(
-        name = name + "_binary_manifest_generator",
-        outs = [name + "_generated_AndroidManifest.xml"],
-        cmd = """
-cat > $(OUTS) <<EOF
-<manifest
-  xmlns:android="http://schemas.android.com/apk/res/android"
-  package="dummy.package.for.so">
-  <uses-sdk android:minSdkVersion="24"/>
-</manifest>
-EOF
-""",
-    )
-
-    # Generates dummy apk including .so files.
-    # We extract out .so files and throw away the apk.
-    android_binary(
-        name = name + "_dummy_app",
-        manifest = name + "_generated_AndroidManifest.xml",
-        custom_package = "dummy.package.for.so",
-        multidex = "native",
-        deps = [android_library],
-    )
-
-    native.genrule(
-        name = name,
-        srcs = [android_library + ".aar", name + "_dummy_app_unsigned.apk"],
-        outs = [name + ".aar"],
-        tags = ["manual"],
-        cmd = """
-cp $(location {}.aar) $(location :{}.aar)
-chmod +w $(location :{}.aar)
-origdir=$$PWD
-cd $$(mktemp -d)
-unzip $$origdir/$(location :{}_dummy_app_unsigned.apk) "lib/*"
-find lib -name *_dummy_app.so -delete
-cp -r lib jni
-zip -r $$origdir/$(location :{}.aar) jni/*/*.so
-""".format(android_library, name, name, name, name),
-    )
-
-def mediapipe_java_proto_src_extractor(target, src_out, name = ""):
-    """Extracts the generated MediaPipe java proto source code from the target.
-
-    Args:
-      target: The java proto lite target to be built and extracted.
-      src_out: The output java proto src code path.
-      name: The optional bazel target name.
-
-    Returns:
-      The output java proto src code path.
-    """
-    if not name:
-        name = target.split(":")[-1] + "_proto_java_src_extractor"
-
-    src_jar = target.replace("_java_proto_lite", "_proto-lite-src.jar").replace(":", "/").replace("//", "")
-
-    native.genrule(
-        name = name,
-        srcs = [target],
-        outs = [src_out],
-        cmd = """
-        for FILE in $(SRCS); do
-          if [[ "$$FILE" == *{0} ]]; then
-            unzip -p "$$FILE" {1} > $@
-            break
-          fi
-        done
-        """.format(src_jar, src_out),
-    )
-    return src_out
-
-def mediapipe_java_proto_srcs(name = ""):
-    """Extracts the generated MediaPipe framework java proto source code.
-
-    Args:
-      name: The optional bazel target name.
-
-    Returns:
-      The list of the extrated MediaPipe java proto source code.
-    """
-
-    proto_src_list = []
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework:calculator_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/CalculatorProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework:calculator_options_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/CalculatorOptionsProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework:stream_handler_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/StreamHandlerProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework:packet_factory_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/PacketFactoryProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework:packet_generator_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/PacketGeneratorProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework:status_handler_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/StatusHandlerProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework:mediapipe_options_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/MediaPipeOptionsProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework/formats/annotation:rasterization_java_proto_lite",
-        src_out = "com/google/mediapipe/formats/annotation/proto/RasterizationProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework/formats:classification_java_proto_lite",
-        src_out = "com/google/mediapipe/formats/proto/ClassificationProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework/formats:detection_java_proto_lite",
-        src_out = "com/google/mediapipe/formats/proto/DetectionProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework/formats:landmark_java_proto_lite",
-        src_out = "com/google/mediapipe/formats/proto/LandmarkProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework/formats:location_data_java_proto_lite",
-        src_out = "com/google/mediapipe/formats/proto/LocationDataProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework/formats:matrix_data_java_proto_lite",
-        src_out = "com/google/mediapipe/formats/proto/MatrixDataProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/framework/formats:rect_java_proto_lite",
-        src_out = "com/google/mediapipe/formats/proto/RectProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/util:color_java_proto_lite",
-        src_out = "com/google/mediapipe/util/proto/ColorProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/util:label_map_java_proto_lite",
-        src_out = "com/google/mediapipe/util/proto/LabelMapProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/util:render_data_java_proto_lite",
-        src_out = "com/google/mediapipe/util/proto/RenderDataProto.java",
-    ))
-
-    return proto_src_list
-
-def mediapipe_logging_java_proto_srcs(name = ""):
-    """Extracts the generated logging-related MediaPipe java proto source code.
-
-    Args:
-      name: The optional bazel target name.
-
-    Returns:
-      The list of the extrated MediaPipe logging-related java proto source code.
-    """
-
-    proto_src_list = []
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/util/analytics:mediapipe_log_extension_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/MediaPipeLoggingProto.java",
-    ))
-
-    proto_src_list.append(mediapipe_java_proto_src_extractor(
-        target = "//mediapipe/util/analytics:mediapipe_logging_enums_java_proto_lite",
-        src_out = "com/google/mediapipe/proto/MediaPipeLoggingEnumsProto.java",
-    ))
-    return proto_src_list

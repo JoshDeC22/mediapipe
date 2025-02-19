@@ -196,15 +196,6 @@ config_setting_and_platform(
     visibility = ["//visibility:public"],
 )
 
-# Emscripten (WebAssembly)
-config_setting_and_platform(
-    name = "emscripten",
-    constraint_values = [
-        "@platforms//cpu:wasm32",
-    ],
-    visibility = ["//visibility:public"],
-)
-
 exports_files(
     ["provisioning_profile.mobileprovision"],
     visibility = ["//visibility:public"],

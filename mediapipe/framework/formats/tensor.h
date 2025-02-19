@@ -67,13 +67,6 @@
 #define builtin_FILE() ""
 #endif
 
-#include "mediapipe/gpu/webgpu/webgpu_check.h"
-#if MEDIAPIPE_USE_WEBGPU
-#include <webgpu/webgpu_cpp.h>
-
-#include "mediapipe/gpu/webgpu/webgpu_service.h"
-#endif  // MEDIAPIPE_USE_WEBGPU
-
 namespace mediapipe {
 // Tensor is a container of multi-dimensional data that supports sharing the
 // content across different backends and APIs, currently: CPU / Metal / OpenGL.
@@ -211,9 +204,6 @@ class Tensor {
 
   class AHardwareBufferView : public View {
    public:
-    // Returns the AHardwareBuffer handle. Note that writes to the handle may be
-    // pending. To enable synchronized read access, a fence FD can be obtained
-    // from GetWriteCompleteFenceFd().
     AHardwareBuffer* handle() const {
       return hardware_buffer_->GetAHardwareBuffer();
     }
@@ -226,10 +216,6 @@ class Tensor {
       is_write_view_ = src.is_write_view_;
     }
 
-    // Returns a file descriptor fence that signals the end of a pending write
-    // operation.
-    // Note that the provided file descriptor is valid only during the lifetime
-    // of the view and must be duplicated if used outside of the view.
     int GetWriteCompleteFenceFd() const {
       ABSL_CHECK(!is_write_view_)
           << "AHWB write view can't return write complete fence FD'";
@@ -320,32 +306,6 @@ class Tensor {
   OpenGlTexture2dView GetOpenGlTexture2dWriteView() const;
 #endif  // MEDIAPIPE_OPENGL_ES_VERSION >= MEDIAPIPE_OPENGL_ES_30
 
-#if MEDIAPIPE_USE_WEBGPU
-  class WebGpuTexture2dView : public View {
-   public:
-    WebGpuTexture2dView(WebGpuTexture2dView&& src)
-        : View(std::move(src.lock_)) {  // Only moves the View portion of src.
-      name_ = std::exchange(src.name_, nullptr);
-    }
-
-    wgpu::Texture name() const { return name_; }
-
-   protected:
-    friend class Tensor;
-
-    WebGpuTexture2dView(wgpu::Texture name,
-                        std::unique_ptr<absl::MutexLock>&& lock)
-        : View(std::move(lock)), name_(name) {}
-
-    wgpu::Texture name_;
-  };
-
-  WebGpuTexture2dView GetWebGpuTexture2dReadView(
-      const WebGpuService& service) const;
-  WebGpuTexture2dView GetWebGpuTexture2dWriteView(
-      const WebGpuService& service) const;
-#endif  // MEDIAPIPE_USE_WEBGPU
-
 #if MEDIAPIPE_OPENGL_ES_VERSION >= MEDIAPIPE_OPENGL_ES_31
   class OpenGlBufferView : public View {
    public:
@@ -413,9 +373,8 @@ class Tensor {
     return valid_ & (kValidAHardwareBuffer | kValidCpu);
   }
   bool ready_on_gpu() const {
-    return valid_ &
-           (kValidMetalBuffer | kValidOpenGlBuffer | kValidWebGpuTexture2d |
-            kValidAHardwareBuffer | kValidOpenGlTexture2d);
+    return valid_ & (kValidMetalBuffer | kValidOpenGlBuffer |
+                     kValidAHardwareBuffer | kValidOpenGlTexture2d);
   }
   bool ready_as_metal_buffer() const { return valid_ & kValidMetalBuffer; }
   bool ready_as_opengl_buffer() const {
@@ -425,9 +384,6 @@ class Tensor {
     return valid_ & kValidOpenGlTexture2d;
   }
   bool ready_as_ahwb() const { return use_ahwb_; }
-  bool ready_as_webgpu_texture_2d() const {
-    return valid_ & kValidWebGpuTexture2d;
-  }
 
  private:
   friend class MtlBufferView;
@@ -447,7 +403,6 @@ class Tensor {
     kValidMetalBuffer = 1 << 1,
     kValidOpenGlBuffer = 1 << 2,
     kValidOpenGlTexture2d = 1 << 3,
-    kValidWebGpuTexture2d = 1 << 4,
     kValidAHardwareBuffer = 1 << 5,
   };
   // A list of resource which are currently allocated and synchronized between
@@ -463,10 +418,6 @@ class Tensor {
   // of ODR if this header includes any actual code that uses MtlResources.
   mutable std::unique_ptr<MtlResources> mtl_resources_;
 
-#if MEDIAPIPE_USE_WEBGPU
-  mutable wgpu::Device webgpu_device_;
-  mutable wgpu::Texture webgpu_texture2d_;
-#endif  // MEDIAPIPE_USE_WEBGPU
 #ifdef MEDIAPIPE_TENSOR_USE_AHWB
   mutable std::shared_ptr<HardwareBuffer> ahwb_;
 

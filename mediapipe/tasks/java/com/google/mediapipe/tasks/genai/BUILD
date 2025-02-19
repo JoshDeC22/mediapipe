@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//mediapipe/tasks/java/com/google/mediapipe/tasks:mediapipe_tasks_aar.bzl", "mediapipe_build_aar_with_jni", "mediapipe_java_proto_src_extractor")
+load("//mediapipe/tasks/java/com/google/mediapipe/tasks:mediapipe_tasks_aar.bzl", "mediapipe_tasks_genai_aar")
 
 licenses(["notice"])
 
@@ -25,7 +25,7 @@ cc_binary(
         "-fvisibility=hidden",
     ],
     linkshared = 1,
-    deps = ["//mediapipe/tasks/java/com/google/mediapipe/tasks/genai/llminference/jni:llm"],
+    deps = ["//mediapipe/tasks/java/com/google/mediapipe/tasks/core/jni:llm"],
 )
 
 cc_library(
@@ -34,33 +34,8 @@ cc_library(
     alwayslink = 1,
 )
 
-android_library(
-    name = "tasks_genai_aar_library",
-    srcs = glob(["**/*.java"]) + [
-        mediapipe_java_proto_src_extractor(
-            src_out = "com/google/mediapipe/tasks/genai/llminference/jni/proto/LlmOptionsProto.java",
-            target = "//mediapipe/tasks/java/com/google/mediapipe/tasks/genai/llminference/jni/proto:llm_options_java_proto_lite",
-        ),
-        mediapipe_java_proto_src_extractor(
-            src_out = "com/google/mediapipe/tasks/genai/llminference/jni/proto/LlmResponseContextProto.java",
-            target = "//mediapipe/tasks/java/com/google/mediapipe/tasks/genai/llminference/jni/proto:llm_response_context_java_proto_lite",
-        ),
-    ],
-    manifest = "AndroidManifest.xml",
-    deps = [
-        ":libllm_inference_engine_jni_lib",
-        "//mediapipe/java/com/google/mediapipe/framework/image",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/core:core_java",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/core:logging",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/genai/llminference/jni/proto:llm_options_java_proto_lite",
-        "//mediapipe/tasks/java/com/google/mediapipe/tasks/genai/llminference/jni/proto:llm_response_context_java_proto_lite",
-        "//third_party:autovalue",
-        "@com_google_protobuf//:protobuf_javalite",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-mediapipe_build_aar_with_jni(
+mediapipe_tasks_genai_aar(
     name = "tasks_genai",
-    android_library = ":tasks_genai_aar_library",
+    srcs = glob(["**/*.java"]) + ["//mediapipe/tasks/java/com/google/mediapipe/tasks/core:llm_java_srcs"],
+    native_library = ":libllm_inference_engine_jni_lib",
 )

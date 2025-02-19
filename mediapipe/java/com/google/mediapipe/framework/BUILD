@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
-
 licenses(["notice"])
 
 # MediaPipe Android framework.
@@ -60,8 +58,8 @@ android_library(
     deps = [
         ":android_core",
         "//mediapipe/java/com/google/mediapipe/framework/image",
-        "@maven//:androidx_annotation_annotation",
-        "@maven//:androidx_legacy_legacy_support_v4",
+        "//third_party:androidx_annotation",
+        "//third_party:androidx_legacy_support_v4",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_flogger_flogger",
         "@maven//:com_google_flogger_flogger_system_backend",

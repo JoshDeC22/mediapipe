@@ -31,27 +31,22 @@ using ::mediapipe::Packet;
   NSInteger timestampInMilliseconds =
       (NSInteger)(packet.Timestamp().Value() / kMicrosecondsPerMillisecond);
 
-  std::vector<EmbeddingResultProto> cppEmbeddingResults;
-  if (packet.ValidateAsType<EmbeddingResultProto>().ok()) {
-    // If `runningMode = .audioStream`, only a single `EmbeddingResult` will be returned in the
-    // result packet.
-    cppEmbeddingResults.emplace_back(packet.Get<EmbeddingResultProto>());
-  } else if (packet.ValidateAsType<std::vector<EmbeddingResultProto>>().ok()) {
-    // If `runningMode = .audioStream`, a vector of timestamped `EmbeddingResult`s will be
-    // returned in the result packet.
-    cppEmbeddingResults = packet.Get<std::vector<EmbeddingResultProto>>();
-  } else {
-    // If packet does not contain protobuf of a type expected by the audio embedder.
-    return [[MPPAudioEmbedderResult alloc] initWithEmbeddingResults:@[]
-                                            timestampInMilliseconds:timestampInMilliseconds];
+  if (!packet.ValidateAsType<EmbeddingResultProto>().ok()) {
+    // MPPAudioEmbedderResult's timestamp is populated from timestamp `EmbeddingResultProto`'s
+    // timestamp_ms(). It is 0 since the packet can't be validated as a `EmbeddingResultProto`.
+    return [[MPPAudioEmbedderResult alloc] initWithEmbeddingResults:nil
+                                           timestampInMilliseconds:timestampInMilliseconds];
   }
 
-  NSMutableArray<MPPEmbeddingResult *> *embeddingResults =
-      [NSMutableArray arrayWithCapacity:cppEmbeddingResults.size()];
+  std::vector<EmbeddingResultProto> cppEmbeddingResultProtos =
+      packet.Get<std::vector<EmbeddingResultProto>>();
 
-  for (const auto &cppEmbeddingResult : cppEmbeddingResults) {
+  NSMutableArray<MPPEmbeddingResult *> *embeddingResults =
+      [NSMutableArray arrayWithCapacity:cppEmbeddingResultProtos.size()];
+
+  for (const auto &cppEmbeddingResultProto : cppEmbeddingResultProtos) {
     MPPEmbeddingResult *embeddingResult =
-        [MPPEmbeddingResult embeddingResultWithProto:cppEmbeddingResult];
+        [MPPEmbeddingResult embeddingResultWithProto:cppEmbeddingResultProto];
     [embeddingResults addObject:embeddingResult];
   }
 

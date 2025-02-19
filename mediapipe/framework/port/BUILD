@@ -113,7 +113,6 @@ cc_library(
         ":status",
         "//mediapipe/framework/deps:file_helpers",
         "//mediapipe/framework/deps:file_path",
-        "//mediapipe/framework/deps:mmapped_file",
     ],
 )
 
@@ -125,7 +124,6 @@ cc_library(
             "//mediapipe/framework/deps:image_resizer",
             "//mediapipe/framework/port:opencv_core",
         ],
-        "//mediapipe:emscripten": ["//mediapipe/framework/deps:image_resizer"],
     }),
 )
 
@@ -384,9 +382,7 @@ cc_library(
 cc_library(
     name = "singleton",
     hdrs = ["singleton.h"],
-    deps = [
-        "//mediapipe/framework/deps:singleton",
-    ],
+    deps = ["//mediapipe/framework/deps:singleton"],
 )
 
 cc_library(
@@ -445,7 +441,6 @@ cc_library(
         "//conditions:default": [":threadpool_impl_default_to_google"],
         "//mediapipe:android": [":threadpool_impl_default_to_mediapipe"],
         "//mediapipe:apple": [":threadpool_impl_default_to_mediapipe"],
-        "//mediapipe:emscripten": [":threadpool_impl_default_to_mediapipe"],
     }),
 )
 

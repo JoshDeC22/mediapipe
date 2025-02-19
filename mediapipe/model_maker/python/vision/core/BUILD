@@ -24,28 +24,17 @@ package(default_visibility = [
 py_library(
     name = "image_preprocessing",
     srcs = ["image_preprocessing.py"],
-    deps = [
-        "@model_maker_pip_deps_tensorflow//:pkg",
-    ],
 )
 
 py_test(
     name = "image_preprocessing_test",
     srcs = ["image_preprocessing_test.py"],
-    deps = [
-        ":image_preprocessing",
-        "@model_maker_pip_deps_numpy//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
-    ],
+    deps = [":image_preprocessing"],
 )
 
 py_library(
     name = "image_utils",
     srcs = ["image_utils.py"],
-    deps = [
-        "@model_maker_pip_deps_pillow//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
-    ],
 )
 
 py_test(
@@ -54,15 +43,10 @@ py_test(
     deps = [
         ":image_utils",
         ":test_utils",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
 py_library(
     name = "test_utils",
     srcs = ["test_utils.py"],
-    deps = [
-        "@model_maker_pip_deps_numpy//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
-    ],
 )

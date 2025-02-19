@@ -33,20 +33,13 @@ using ::mediapipe::Packet;
   NSInteger timestampInMilliseconds =
       (NSInteger)(packet.Timestamp().Value() / kMicrosecondsPerMillisecond);
 
-  std::vector<ClassificationResultProto> cppClassificationResults;
-  if (packet.ValidateAsType<ClassificationResultProto>().ok()) {
-    // If `runningMode = .audioStream`, only a single `ClassificationResult` will be returned in the
-    // result packet.
-    cppClassificationResults.emplace_back(packet.Get<ClassificationResultProto>());
-  } else if (packet.ValidateAsType<std::vector<ClassificationResultProto>>().ok()) {
-    // If `runningMode = .audioStream`, a vector of timestamped `ClassificationResult`s will be
-    // returned in the result packet.
-    cppClassificationResults = packet.Get<std::vector<ClassificationResultProto>>();
-  } else {
-    // If packet does not contain protobuf of a type expected by the audio classifier.
+  if (!packet.ValidateAsType<std::vector<ClassificationResultProto>>().ok()) {
     return [[MPPAudioClassifierResult alloc] initWithClassificationResults:@[]
                                                    timestampInMilliseconds:timestampInMilliseconds];
   }
+
+  std::vector<ClassificationResultProto> cppClassificationResults =
+      packet.Get<std::vector<ClassificationResultProto>>();
 
   NSMutableArray<MPPClassificationResult *> *classificationResults =
       [NSMutableArray arrayWithCapacity:cppClassificationResults.size()];

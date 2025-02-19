@@ -61,9 +61,6 @@ public interface TasksStatsLogger {
   /** Logs the start of a MediaPipe Tasks API session. */
   public void logSessionStart();
 
-  /** Logs the cloning of a MediaPipe Tasks API session. */
-  public void logSessionClone();
-
   /**
    * Records MediaPipe Tasks API receiving CPU input data.
    *

@@ -16,25 +16,13 @@ load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 licenses(["notice"])
 
-package(default_visibility = [
-    ":clients",
-    "//mediapipe/tasks:internal",
-])
-
-package_group(
-    name = "clients",
-    packages = [
-        "//googlemac/iPhone/Home/OnDeviceML/...",
-    ],
-)
+package(default_visibility = ["//mediapipe/tasks:internal"])
 
 swift_library(
     name = "LlmInference",
     srcs = [
         "sources/LlmInference.swift",
-        "sources/LlmInference+Session.swift",
         "//mediapipe/tasks/ios/genai/core:sources/GenAiInferenceError.swift",
-        "//mediapipe/tasks/ios/genai/core:sources/LlmSessionRunner.swift",
         "//mediapipe/tasks/ios/genai/core:sources/LlmTaskRunner.swift",
     ],
     # This ensures the compiler does not complain about MediaPipeTasksGenAIC being built separately.

@@ -34,7 +34,6 @@
 #include "mediapipe/framework/port/gtest.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status_matchers.h"
-#include "mediapipe/framework/resources.h"
 #include "mediapipe/framework/tool/sink.h"
 #include "mediapipe/util/tflite/tflite_model_loader.h"
 #include "tensorflow/lite/interpreter.h"
@@ -310,10 +309,8 @@ class InferenceCalculatorIoMapTestWithParams
     : public ::testing::TestWithParam<InputOutputExpectedOrderTestConfig> {
  protected:
   void SetUp() override {
-    std::unique_ptr<Resources> resources = CreateDefaultResources();
     MP_ASSERT_OK_AND_ASSIGN(
-        model_, TfLiteModelLoader::LoadFromPath(*resources,
-                                                k3In3OutSwaps2And0ModelPath));
+        model_, TfLiteModelLoader::LoadFromPath(k3In3OutSwaps2And0ModelPath));
     InterpreterBuilder(
         *model_.Get(),
         BuiltinOpResolverWithoutDefaultDelegates())(&interpreter_);
@@ -372,10 +369,8 @@ INSTANTIATE_TEST_SUITE_P(
 class InferenceIoMapperTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    std::unique_ptr<Resources> resources = CreateDefaultResources();
     MP_ASSERT_OK_AND_ASSIGN(
-        model_, TfLiteModelLoader::LoadFromPath(*resources,
-                                                k3In3OutSwaps2And0ModelPath));
+        model_, TfLiteModelLoader::LoadFromPath(k3In3OutSwaps2And0ModelPath));
     InterpreterBuilder(
         *model_.Get(),
         BuiltinOpResolverWithoutDefaultDelegates())(&interpreter_);
@@ -715,10 +710,8 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST(InferenceIoMapper,
      ShouldIgnoreMultiSignatureChecksWhenNoNameBasedMapConfigExists) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(
-      const auto model,
-      TfLiteModelLoader::LoadFromPath(*resources, kTwoSignaturesModelPath));
+  MP_ASSERT_OK_AND_ASSIGN(const auto model, TfLiteModelLoader::LoadFromPath(
+                                                kTwoSignaturesModelPath));
   std::unique_ptr<tflite::Interpreter> interpreter;
   InterpreterBuilder(*model.Get(),
                      BuiltinOpResolverWithoutDefaultDelegates())(&interpreter);
@@ -733,10 +726,8 @@ TEST(InferenceIoMapper,
 }
 
 TEST(InferenceIoMapper, ShouldFailWhenMultipleSignaturesExist) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(
-      const auto model,
-      TfLiteModelLoader::LoadFromPath(*resources, kTwoSignaturesModelPath));
+  MP_ASSERT_OK_AND_ASSIGN(const auto model, TfLiteModelLoader::LoadFromPath(
+                                                kTwoSignaturesModelPath));
   std::unique_ptr<tflite::Interpreter> interpreter;
   InterpreterBuilder(*model.Get(),
                      BuiltinOpResolverWithoutDefaultDelegates())(&interpreter);

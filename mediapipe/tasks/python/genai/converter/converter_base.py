@@ -23,7 +23,7 @@ import numpy as np
 class QuantizationAction:
   """Container of the tensor values and its corresponding quantization settings.
 
-  The container is responsible for hosting all of the information that is
+  The contrainer is responsible for hosting all of the information that is
   required to execute the weight-only quantization.
 
   Attributes:
@@ -171,9 +171,5 @@ class ModelWriterBase:
       os.mkdir(self._output_dir)
     self._backend = backend
 
-  def write_variables(
-      self,
-      variables: Dict[str, Tuple[np.ndarray, bool]],
-      use_fake_values: bool = False,
-  ):
+  def write_variables(self, variables: Dict[str, Tuple[np.ndarray, bool]]):
     raise NotImplementedError("The write_variables method is not implemented.")

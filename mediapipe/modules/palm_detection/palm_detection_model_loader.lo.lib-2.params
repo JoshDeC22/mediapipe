@@ -1,0 +1,5 @@
+/nologo
+/OUT:bazel-out/x64_windows-opt/bin/mediapipe/modules/palm_detection/palm_detection_model_loader.lo.lib
+/MACHINE:X64
+bazel-out/x64_windows-opt/bin/mediapipe/modules/palm_detection/_objs/palm_detection_model_loader/palm_detection_model_loader_linked.obj
+/ignore:4221

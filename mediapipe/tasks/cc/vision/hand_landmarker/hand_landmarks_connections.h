@@ -23,25 +23,25 @@ namespace tasks {
 namespace vision {
 namespace hand_landmarker {
 
-inline constexpr std::array<std::array<int, 2>, 6> kHandPalmConnections{
+static constexpr std::array<std::array<int, 2>, 6> kHandPalmConnections{
     {{0, 1}, {0, 5}, {9, 13}, {13, 17}, {5, 9}, {0, 17}}};
 
-inline constexpr std::array<std::array<int, 2>, 3> kHandThumbConnections{
+static constexpr std::array<std::array<int, 2>, 3> kHandThumbConnections{
     {{1, 2}, {2, 3}, {3, 4}}};
 
-inline constexpr std::array<std::array<int, 2>, 3> kHandIndexFingerConnections{
+static constexpr std::array<std::array<int, 2>, 3> kHandIndexFingerConnections{
     {{5, 6}, {6, 7}, {7, 8}}};
 
-inline constexpr std::array<std::array<int, 2>, 3> kHandMiddleFingerConnections{
+static constexpr std::array<std::array<int, 2>, 3> kHandMiddleFingerConnections{
     {{9, 10}, {10, 11}, {11, 12}}};
 
-inline constexpr std::array<std::array<int, 2>, 3> kHandRingFingerConnections{
+static constexpr std::array<std::array<int, 2>, 3> kHandRingFingerConnections{
     {{13, 14}, {14, 15}, {15, 16}}};
 
-inline constexpr std::array<std::array<int, 2>, 3> kHandPinkyFingerConnections{
+static constexpr std::array<std::array<int, 2>, 3> kHandPinkyFingerConnections{
     {{17, 18}, {18, 19}, {19, 20}}};
 
-inline constexpr std::array<std::array<int, 2>, 21> kHandConnections{
+static constexpr std::array<std::array<int, 2>, 21> kHandConnections{
     {{0, 1},   {0, 5},   {9, 13},  {13, 17}, {5, 9},   {0, 17},  {1, 2},
      {2, 3},   {3, 4},   {5, 6},   {6, 7},   {7, 8},   {9, 10},  {10, 11},
      {11, 12}, {13, 14}, {14, 15}, {15, 16}, {17, 18}, {18, 19}, {19, 20}}};

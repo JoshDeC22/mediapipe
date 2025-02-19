@@ -44,11 +44,10 @@ using TensorsToSegmentationCalculatorTest =
 
 TEST_P(TensorsToSegmentationCalculatorTest, ParameterizedTests) {
   const auto& [test_name, inputs, expected_outputs, activation, rows, cols,
-               rows_new, cols_new, channels, max_abs_diff, use_single_tensor] =
-      GetParam();
+               rows_new, cols_new, channels, max_abs_diff] = GetParam();
 
-  auto graph_config = test_utils::CreateGraphConfigForTest(
-      /*test_gpu=*/false, activation, use_single_tensor);
+  auto graph_config =
+      test_utils::CreateGraphConfigForTest(/*test_gpu=*/false, activation);
 
   std::vector<Packet> output_packets;
   tool::AddVectorSink("image_as_mask", &graph_config, &output_packets);
@@ -57,21 +56,21 @@ TEST_P(TensorsToSegmentationCalculatorTest, ParameterizedTests) {
   MP_ASSERT_OK(graph.Initialize(graph_config));
   MP_ASSERT_OK(graph.StartRun({}));
 
-  Tensor tensor = Tensor(Tensor::ElementType::kFloat32,
-                         Tensor::Shape{1, rows, cols, channels});
+  auto tensors = std::make_unique<std::vector<Tensor>>();
+  tensors->emplace_back(Tensor::ElementType::kFloat32,
+                        Tensor::Shape{1, rows, cols, channels});
 
   // We scope the tensor's GetCpuWriteView() call so that its lock is released
   // before we pass it into the graph.
   {
-    auto view = tensor.GetCpuWriteView();
+    auto view = tensors->back().GetCpuWriteView();
     float* tensor_buffer = view.buffer<float>();
     for (int i = 0; i < inputs.size(); ++i) {
       tensor_buffer[i] = inputs[i];
     }
+    MP_ASSERT_OK(graph.AddPacketToInputStream(
+        "tensors", mediapipe::Adopt(tensors.release()).At(Timestamp(0))));
   }
-
-  MP_ASSERT_OK(
-      test_utils::AddTensorInput(std::move(tensor), use_single_tensor, graph));
 
   // The output size is defined as pair(new_width, new_height).
   MP_ASSERT_OK(graph.AddPacketToInputStream(
@@ -101,7 +100,8 @@ TEST_P(TensorsToSegmentationCalculatorTest, ParameterizedTests) {
   // tests.
   EXPECT_LE(max_val, max_abs_diff);
 
-  MP_ASSERT_OK(graph.CloseAllInputStreams());
+  MP_ASSERT_OK(graph.CloseInputStream("tensors"));
+  MP_ASSERT_OK(graph.CloseInputStream("size"));
   MP_ASSERT_OK(graph.WaitUntilDone());
 }
 
@@ -119,8 +119,7 @@ INSTANTIATE_TEST_SUITE_P(
          .rows_new = 4,
          .cols_new = 4,
          .channels = 1,
-         .max_abs_diff = 1e-7,
-         .use_single_tensor = false},
+         .max_abs_diff = 1e-7},
         {.test_name = "OutputResizeOnly",
          .inputs = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0,
                     12.0, 13.0, 14.0, 15.0, 16.0},
@@ -135,8 +134,7 @@ INSTANTIATE_TEST_SUITE_P(
          .rows_new = 5,
          .cols_new = 6,
          .channels = 1,
-         .max_abs_diff = 1e-6,
-         .use_single_tensor = false},
+         .max_abs_diff = 1e-6},
         {.test_name = "SigmoidActivationWithNoOutputResize",
          .inputs = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0,
                     12.0, 13.0, 14.0, 15.0, 16.0},
@@ -149,8 +147,7 @@ INSTANTIATE_TEST_SUITE_P(
          .rows_new = 4,
          .cols_new = 4,
          .channels = 1,
-         .max_abs_diff = 1e-6,
-         .use_single_tensor = false},
+         .max_abs_diff = 1e-6},
         {.test_name = "SigmoidActivationWithOutputResize",
          .inputs = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0,
                     12.0, 13.0, 14.0, 15.0, 16.0},
@@ -166,8 +163,7 @@ INSTANTIATE_TEST_SUITE_P(
          .rows_new = 5,
          .cols_new = 6,
          .channels = 1,
-         .max_abs_diff = 1e-6,
-         .use_single_tensor = false},
+         .max_abs_diff = 1e-6},
         {.test_name = "SoftmaxActivationWithNoOutputResize",
          .inputs = {1.0,  2.0,  4.0,  2.0,  3.0,  5.0,  6.0,  1.5,
                     7.0,  10.0, 11.0, 4.0,  12.0, 15.0, 16.0, 18.5,
@@ -201,21 +197,7 @@ INSTANTIATE_TEST_SUITE_P(
          .rows_new = 5,
          .cols_new = 6,
          .channels = 2,
-         .max_abs_diff = 1e-6,
-         .use_single_tensor = false},
-        {.test_name = "SingleTensor",
-         .inputs = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0,
-                    12.0, 13.0, 14.0, 15.0, 16.0},
-         .expected_outputs = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0,
-                              11.0, 12.0, 13.0, 14.0, 15.0, 16.0},
-         .activation = Options::NONE,
-         .rows = 4,
-         .cols = 4,
-         .rows_new = 4,
-         .cols_new = 4,
-         .channels = 1,
-         .max_abs_diff = 1e-7,
-         .use_single_tensor = true},
+         .max_abs_diff = 1e-6},
     }),
     [](const testing::TestParamInfo<
         TensorsToSegmentationCalculatorTest::ParamType>& info) {

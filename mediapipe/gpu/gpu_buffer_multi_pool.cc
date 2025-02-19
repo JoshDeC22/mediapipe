@@ -14,4 +14,9 @@
 
 #include "mediapipe/gpu/gpu_buffer_multi_pool.h"
 
+#include <tuple>
+
+#include "absl/synchronization/mutex.h"
+#include "mediapipe/framework/port/logging.h"
+
 namespace mediapipe {}  // namespace mediapipe

@@ -61,5 +61,5 @@ mediapipe_ts_library(
 
 jasmine_node_test(
     name = "audio_embedder_test",
-    srcs = [":audio_embedder_test_lib"],
+    deps = [":audio_embedder_test_lib"],
 )

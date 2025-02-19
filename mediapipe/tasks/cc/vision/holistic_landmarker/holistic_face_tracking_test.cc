@@ -82,9 +82,9 @@ constexpr char kImageInStream[] = "image_in";
 constexpr char kPoseLandmarksInStream[] = "pose_landmarks_in";
 constexpr char kFaceLandmarksOutStream[] = "face_landmarks_out";
 constexpr char kRenderedImageOutStream[] = "rendered_image_out";
-constexpr char kFaceDetectionModelFile[] = "face_detection_short_range.tflite";
-constexpr char kFaceLandmarksModelFile[] =
-    "facemesh2_lite_iris_faceflag_2023_02_14.tflite";
+constexpr char kFaceDetectorTFLiteName[] = "face_detector.tflite";
+constexpr char kFaceLandmarksDetectorTFLiteName[] =
+    "face_landmarks_detector.tflite";
 
 std::string GetFilePath(absl::string_view filename) {
   return file::JoinPath("./", kTestDataDirectory, filename);
@@ -108,16 +108,6 @@ mediapipe::LandmarksToRenderDataCalculatorOptions GetFaceRendererOptions() {
   return render_options;
 }
 
-mediapipe::RectToRenderDataCalculatorOptions GetRectRendererOptions() {
-  mediapipe::RectToRenderDataCalculatorOptions render_options;
-  render_options.set_filled(false);
-  render_options.mutable_color()->set_r(255);
-  render_options.mutable_color()->set_g(0);
-  render_options.mutable_color()->set_b(0);
-  render_options.set_thickness(2);
-  return render_options;
-}
-
 absl::StatusOr<std::unique_ptr<ModelAssetBundleResources>>
 CreateModelAssetBundleResources(const std::string& model_asset_filename) {
   auto external_model_bundle = std::make_unique<ExternalFile>();
@@ -137,19 +127,38 @@ absl::StatusOr<std::unique_ptr<tasks::core::TaskRunner>> CreateTaskRunner() {
   Stream<NormalizedLandmarkList> face_landmarks_from_pose =
       SplitToRanges(pose_landmarks, {{0, 11}}, graph)[0];
   // Create face landmarker model bundle.
+  MP_ASSIGN_OR_RETURN(
+      auto model_bundle,
+      CreateModelAssetBundleResources(GetFilePath("face_landmarker_v2.task")));
   face_detector::proto::FaceDetectorGraphOptions detector_options;
   face_landmarker::proto::FaceLandmarksDetectorGraphOptions
       landmarks_detector_options;
 
   // Set face detection model.
+  MP_ASSIGN_OR_RETURN(auto face_detector_model_file,
+                      model_bundle->GetFile(kFaceDetectorTFLiteName));
+  core::proto::FilePointerMeta face_detection_file_pointer;
+  face_detection_file_pointer.set_pointer(
+      reinterpret_cast<uint64_t>(face_detector_model_file.data()));
+  face_detection_file_pointer.set_length(face_detector_model_file.size());
+  detector_options.mutable_base_options()
+      ->mutable_model_asset()
+      ->mutable_file_pointer_meta()
+      ->Swap(&face_detection_file_pointer);
   detector_options.set_num_faces(1);
-  detector_options.mutable_base_options()->mutable_model_asset()->set_file_name(
-      GetFilePath(kFaceDetectionModelFile));
 
   // Set face landmarks model.
+  MP_ASSIGN_OR_RETURN(auto face_landmarks_model_file,
+                      model_bundle->GetFile(kFaceLandmarksDetectorTFLiteName));
+  core::proto::FilePointerMeta face_landmarks_detector_file_pointer;
+  face_landmarks_detector_file_pointer.set_pointer(
+      reinterpret_cast<uint64_t>(face_landmarks_model_file.data()));
+  face_landmarks_detector_file_pointer.set_length(
+      face_landmarks_model_file.size());
   landmarks_detector_options.mutable_base_options()
       ->mutable_model_asset()
-      ->set_file_name(GetFilePath(kFaceLandmarksModelFile));
+      ->mutable_file_pointer_meta()
+      ->Swap(&face_landmarks_detector_file_pointer);
 
   // Track holistic face.
   HolisticFaceTrackingRequest request;
@@ -164,11 +173,10 @@ absl::StatusOr<std::unique_ptr<tasks::core::TaskRunner>> CreateTaskRunner() {
   auto render_scale = utils::GetRenderScale(
       image_size, result.debug_output.roi_from_pose, 0.0001, graph);
 
+  auto face_landmarks_render_data = utils::RenderLandmarks(
+      face_landmarks, render_scale, GetFaceRendererOptions(), graph);
   std::vector<Stream<mediapipe::RenderData>> render_list = {
-      utils::RenderLandmarks(face_landmarks, render_scale,
-                             GetFaceRendererOptions(), graph),
-      utils::RenderRect(result.debug_output.roi_from_pose,
-                        GetRectRendererOptions(), graph)};
+      face_landmarks_render_data};
 
   auto rendered_image =
       utils::Render(
@@ -201,7 +209,6 @@ TEST_F(HolisticFaceTrackingTest, SmokeTest) {
                                         holistic_result.pose_landmarks())}}));
   ASSERT_TRUE(output_packets.find(kFaceLandmarksOutStream) !=
               output_packets.end());
-  ASSERT_FALSE(output_packets.find(kFaceLandmarksOutStream)->second.IsEmpty());
   auto face_landmarks = output_packets.find(kFaceLandmarksOutStream)
                             ->second.Get<NormalizedLandmarkList>();
   EXPECT_THAT(

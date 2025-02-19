@@ -101,9 +101,7 @@ def _metal_library_impl(ctx):
                 _metal_compiler_args(ctx, src, obj, ctx.attr.minimum_os_version, ctx.attr.copts, diagnostics, deps_dump))
 
         apple_support.run(
-            actions = ctx.actions,
-            xcode_config = ctx.attr._xcode_config[apple_common.XcodeVersionConfig],
-            apple_fragment = ctx.fragments.apple,
+            ctx,
             xcode_path_resolve_level = apple_support.xcode_path_resolve_level.args,
             inputs = _metal_compiler_inputs(ctx.files.srcs, ctx.files.hdrs, ctx.attr.deps),
             outputs = [obj, diagnostics, deps_dump],
@@ -125,9 +123,7 @@ def _metal_library_impl(ctx):
     ] + [x.path for x in output_objs]
 
     apple_support.run(
-        actions = ctx.actions,
-        xcode_config = ctx.attr._xcode_config[apple_common.XcodeVersionConfig],
-        apple_fragment = ctx.fragments.apple,
+        ctx,
         xcode_path_resolve_level = apple_support.xcode_path_resolve_level.args,
         inputs = output_objs,
         outputs = (output_lib,),

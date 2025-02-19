@@ -1,14 +1,21 @@
 #include "mediapipe/framework/formats/unique_fd.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <utility>
 
 #include "mediapipe/framework/port/gtest.h"
-#include "mediapipe/framework/port/status_matchers.h"
-#include "mediapipe/util/fd_test_util.h"
 
 namespace mediapipe {
 
 namespace {
+
+// Returns a valid system file descriptor.
+int GetValidFd() { return dup(STDOUT_FILENO); }
+
+// Helper function to check if the file descriptor is valid (still open).
+int IsFdValid(int fd) { return fcntl(fd, F_GETFD) != -1; }
 
 TEST(UniqueFdTest, ShouldInitializeInvalidFd) {
   UniqueFd unique_fd;
@@ -27,9 +34,7 @@ TEST(UniqueFdTest, ShouldCloseFdDuringDestruction) {
   const int fd = GetValidFd();
   EXPECT_TRUE(IsFdValid(fd));
 
-  {
-    UniqueFd unique_fd(fd);
-  }
+  { UniqueFd unique_fd(fd); }
 
   EXPECT_FALSE(IsFdValid(fd));
 }
@@ -51,15 +56,6 @@ TEST(UniqueFdTest, ShouldCreateValidFd) {
 
   unique_fd.Reset();
   EXPECT_FALSE(unique_fd.IsValid());
-}
-
-TEST(UniqueFdTest, ShouldDupValidFd) {
-  UniqueFd unique_fd(GetValidFd());
-
-  MP_ASSERT_OK_AND_ASSIGN(UniqueFd dup_unique_fd, unique_fd.Dup());
-
-  EXPECT_TRUE(dup_unique_fd.IsValid());
-  EXPECT_NE(dup_unique_fd.Get(), unique_fd.Get());
 }
 
 TEST(UniqueFdTest, ShouldReleaseValidFd) {

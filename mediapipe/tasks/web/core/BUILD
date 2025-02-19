@@ -74,7 +74,7 @@ mediapipe_ts_library(
 
 jasmine_node_test(
     name = "task_runner_test",
-    srcs = [":task_runner_test_lib"],
+    deps = [":task_runner_test_lib"],
 )
 
 mediapipe_ts_declaration(

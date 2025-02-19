@@ -20,12 +20,6 @@ licenses(["notice"])
 package(default_visibility = ["//visibility:private"])
 
 mediapipe_proto_library(
-    name = "resource_path_proto",
-    srcs = ["resource_path.proto"],
-    visibility = ["//visibility:public"],
-)
-
-mediapipe_proto_library(
     name = "sky_light_calculator_proto",
     srcs = ["sky_light_calculator.proto"],
     visibility = ["//visibility:public"],
@@ -72,7 +66,5 @@ mediapipe_proto_library(
 exports_files([
     "perfetto_detailed.pbtxt",
     "perfetto_minimal.pbtxt",
-    "perfetto_memory.pbtxt",
-    "resource_calculator.data",
-    "resource_subgraph.data",
+    "perfeoot_memory.pbtxt",
 ])

@@ -63,5 +63,5 @@ mediapipe_ts_library(
 
 jasmine_node_test(
     name = "text_embedder_test",
-    srcs = [":text_embedder_test_lib"],
+    deps = [":text_embedder_test_lib"],
 )

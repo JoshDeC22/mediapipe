@@ -31,13 +31,8 @@ export declare interface GPUDeviceWithAdapterInfo extends GPUDevice {
  * manner.
  */
 export declare interface WasmAsyncCloseModule {
-  ccall: (
-    name: string,
-    type: string,
-    inParams: unknown,
-    outParams: unknown,
-    options: unknown,
-  ) => Promise<void>;
+  ccall: (name: string, type: string, inParams: unknown, outParams: unknown,
+      options: unknown) => Promise<void>;
 }
 
 /**
@@ -54,9 +49,8 @@ export function SupportWebGpu<TBase extends LibConstructor>(Base: TBase) {
      * @param adapter The adapter to request GPUDevice.
      */
     static async requestWebGpuDevice(
-      deviceDescriptor?: GPUDeviceDescriptor,
-      adapter?: GPUAdapter,
-    ): Promise<GPUDevice> {
+        deviceDescriptor?: GPUDeviceDescriptor,
+        adapter?: GPUAdapter): Promise<GPUDevice> {
       if (!adapter) {
         adapter = await WebGpuSupportedGraphRunner.requestWebGpuAdapter();
       }
@@ -71,14 +65,13 @@ export function SupportWebGpu<TBase extends LibConstructor>(Base: TBase) {
       }
       const updatedDescriptor: GPUDeviceDescriptor = {
         ...deviceDescriptor,
-        requiredFeatures: supportedFeatures,
+        requiredFeatures: supportedFeatures
       };
       try {
         device = await adapter.requestDevice(updatedDescriptor);
       } catch (e: unknown) {
         console.error(
-          'Unable to initialize WebGPU with the requested features.',
-        );
+            'Unable to initialize WebGPU with the requested features.');
         // Rethrow original error.
         throw e;
       }
@@ -88,12 +81,9 @@ export function SupportWebGpu<TBase extends LibConstructor>(Base: TBase) {
       // Our inference engines can utilize the adapter info to optimize WebGPU
       // shader performance. Therefore, we attempt to attach that information to
       // our internal GPUDevice reference.
-      // We only apply workaround for browsers/environments where necessary,
-      // otherwise we'll encounter a runtime error, since this is read-only.
-      const deviceWithInfo = (device as unknown as GPUDeviceWithAdapterInfo);
-      if (!deviceWithInfo.adapterInfo) {
-        deviceWithInfo.adapterInfo = adapter.info;
-      }
+      const adapterInfo = await adapter.requestAdapterInfo();
+      (device as unknown as GPUDeviceWithAdapterInfo).adapterInfo = adapterInfo;
+
       return device;
     }
 
@@ -102,13 +92,11 @@ export function SupportWebGpu<TBase extends LibConstructor>(Base: TBase) {
      * @param adapterDescriptor The adapterDescriptor to request GPUAdapter.
      */
     static async requestWebGpuAdapter(
-      adapterDescriptor?: GPURequestAdapterOptions,
-    ): Promise<GPUAdapter> {
+        adapterDescriptor?: GPURequestAdapterOptions): Promise<GPUAdapter> {
       const adapter = await navigator.gpu.requestAdapter(adapterDescriptor);
       if (!adapter) {
         throw new Error(
-          'Unable to request adapter from navigator.gpu; Ensure WebGPU is enabled.',
-        );
+            'Unable to request adapter from navigator.gpu; Ensure WebGPU is enabled.');
       }
       return adapter;
     }
@@ -123,17 +111,14 @@ export function SupportWebGpu<TBase extends LibConstructor>(Base: TBase) {
      * canvas will be created.
      */
     initializeForWebGpu(
-      device: GPUDevice,
-      canvas?: HTMLCanvasElement | OffscreenCanvas,
-    ) {
+        device: GPUDevice, canvas?: HTMLCanvasElement|OffscreenCanvas) {
       if (!canvas) {
         canvas = new OffscreenCanvas(1, 1);
       } else if (
-        typeof HTMLCanvasElement !== 'undefined' &&
-        canvas instanceof HTMLCanvasElement
-      ) {
+          typeof HTMLCanvasElement !== 'undefined' &&
+          canvas instanceof HTMLCanvasElement) {
         // TODO b/327324051 - Stop using a hard-coded `canvas_webgpu` selector.
-        canvas.id = 'canvas_webgpu'; // id used as default for WebGPU code
+        canvas.id = 'canvas_webgpu';  // id used as default for WebGPU code
       }
       const context = canvas.getContext('webgpu') as GPUCanvasContext;
       context.configure({
@@ -151,12 +136,7 @@ export function SupportWebGpu<TBase extends LibConstructor>(Base: TBase) {
      */
     closeGraphAsync(): Promise<void> {
       return (this.wasmModule as unknown as WasmAsyncCloseModule).ccall(
-        'closeGraph',
-        'void',
-        [],
-        [],
-        {async: true},
-      );
+          "closeGraph", "void", [], [], {async: true});
     }
   };
 }

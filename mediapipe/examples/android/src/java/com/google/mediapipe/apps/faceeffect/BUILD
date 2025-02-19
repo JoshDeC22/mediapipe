@@ -67,6 +67,5 @@ android_binary(
         "//mediapipe/framework/formats:matrix_data_java_proto_lite",
         "//mediapipe/java/com/google/mediapipe/framework:android_framework",
         "//mediapipe/modules/face_geometry/protos:face_geometry_java_proto_lite",
-        "//third_party:libc++_shared_lib",
     ],
 )

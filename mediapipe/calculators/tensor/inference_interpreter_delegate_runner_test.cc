@@ -21,7 +21,6 @@
 #include "mediapipe/framework/port/gtest.h"
 #include "mediapipe/framework/port/status_macros.h"
 #include "mediapipe/framework/port/status_matchers.h"
-#include "mediapipe/framework/resources.h"
 #include "mediapipe/util/tflite/tflite_model_loader.h"
 #include "tensorflow/lite/core/api/op_resolver.h"
 #include "tensorflow/lite/delegates/xnnpack/xnnpack_delegate.h"
@@ -152,9 +151,8 @@ class InferenceCalculatorDelegateRunnnerTest : public ::testing::Test {
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunInt32ModelWithXNNPackDelegate) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(
-      auto model, TfLiteModelLoader::LoadFromPath(*resources, kInt32ModelFile));
+  MP_ASSERT_OK_AND_ASSIGN(auto model,
+                          TfLiteModelLoader::LoadFromPath(kInt32ModelFile));
   // Create XNNPack delegate.
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
@@ -172,9 +170,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunFloatModelWithXNNPackDelegate) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(auto model, TfLiteModelLoader::LoadFromPath(
-                                          *resources, kFloat32ModelFile));
+  MP_ASSERT_OK_AND_ASSIGN(auto model,
+                          TfLiteModelLoader::LoadFromPath(kFloat32ModelFile));
   // Create XNNPack delegate.
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
@@ -192,9 +189,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunInt32ModelWithXNNPackDelegateWithCustomAllocation) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(
-      auto model, TfLiteModelLoader::LoadFromPath(*resources, kInt32ModelFile));
+  MP_ASSERT_OK_AND_ASSIGN(auto model,
+                          TfLiteModelLoader::LoadFromPath(kInt32ModelFile));
   // Create XNNPack delegate.
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
@@ -212,9 +208,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunFloat32ModelWithXNNPackDelegateWithCustomAllocation) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(auto model, TfLiteModelLoader::LoadFromPath(
-                                          *resources, kFloat32ModelFile));
+  MP_ASSERT_OK_AND_ASSIGN(auto model,
+                          TfLiteModelLoader::LoadFromPath(kFloat32ModelFile));
   // Create XNNPack delegate.
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
@@ -232,9 +227,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunInt32ModelWithDefaultDelegate) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(
-      auto model, TfLiteModelLoader::LoadFromPath(*resources, kInt32ModelFile));
+  MP_ASSERT_OK_AND_ASSIGN(auto model,
+                          TfLiteModelLoader::LoadFromPath(kInt32ModelFile));
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
           tflite::ops::builtin::BuiltinOpResolverWithoutDefaultDelegates>());
@@ -248,9 +242,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunFloat32ModelWithDefaultDelegate) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(auto model, TfLiteModelLoader::LoadFromPath(
-                                          *resources, kFloat32ModelFile));
+  MP_ASSERT_OK_AND_ASSIGN(auto model,
+                          TfLiteModelLoader::LoadFromPath(kFloat32ModelFile));
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
           tflite::ops::builtin::BuiltinOpResolverWithoutDefaultDelegates>());
@@ -264,9 +257,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunInt32ModelWithDefaultDelegateWithCustomAllocation) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(
-      auto model, TfLiteModelLoader::LoadFromPath(*resources, kInt32ModelFile));
+  MP_ASSERT_OK_AND_ASSIGN(auto model,
+                          TfLiteModelLoader::LoadFromPath(kInt32ModelFile));
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
           tflite::ops::builtin::BuiltinOpResolverWithoutDefaultDelegates>());
@@ -280,9 +272,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunFloat32ModelWithDefaultDelegateWithCustomAllocation) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
-  MP_ASSERT_OK_AND_ASSIGN(auto model, TfLiteModelLoader::LoadFromPath(
-                                          *resources, kFloat32ModelFile));
+  MP_ASSERT_OK_AND_ASSIGN(auto model,
+                          TfLiteModelLoader::LoadFromPath(kFloat32ModelFile));
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
           tflite::ops::builtin::BuiltinOpResolverWithoutDefaultDelegates>());
@@ -296,10 +287,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunFloat32ModelWithXNNPackDelegatePassthrough) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
   MP_ASSERT_OK_AND_ASSIGN(
-      auto model,
-      TfLiteModelLoader::LoadFromPath(*resources, k3In3OutSwaps2And0ModelPath));
+      auto model, TfLiteModelLoader::LoadFromPath(k3In3OutSwaps2And0ModelPath));
   // Create XNNPack delegate.
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<
@@ -326,10 +315,8 @@ TEST_F(InferenceCalculatorDelegateRunnnerTest,
 
 TEST_F(InferenceCalculatorDelegateRunnnerTest,
        RunPassthroughFloatModelWithXNNPackDelegateWithCustomAllocation) {
-  std::unique_ptr<Resources> resources = CreateDefaultResources();
   MP_ASSERT_OK_AND_ASSIGN(
-      auto model,
-      TfLiteModelLoader::LoadFromPath(*resources, k3In3OutSwaps2And0ModelPath));
+      auto model, TfLiteModelLoader::LoadFromPath(k3In3OutSwaps2And0ModelPath));
   // Create XNNPack delegate.
   auto op_resolver = PacketAdopting<tflite::OpResolver>(
       std::make_unique<

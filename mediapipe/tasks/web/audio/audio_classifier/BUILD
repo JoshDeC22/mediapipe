@@ -64,5 +64,5 @@ mediapipe_ts_library(
 
 jasmine_node_test(
     name = "audio_classifier_test",
-    srcs = [":audio_classifier_test_lib"],
+    deps = [":audio_classifier_test_lib"],
 )

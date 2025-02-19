@@ -1,0 +1,5 @@
+/nologo
+/OUT:bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/hand_landmark_model_loader.lo.lib
+/MACHINE:X64
+bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/_objs/hand_landmark_model_loader/hand_landmark_model_loader_linked.obj
+/ignore:4221

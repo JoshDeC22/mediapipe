@@ -15,80 +15,191 @@
 import Foundation
 import MediaPipeTasksGenAIC
 
-/// This class is used to create and call appropriate methods on the C `LlmInferenceEngine` to
-/// initialize an LLMInference task and create prompt sessions.
+/// This class is used to create and call appropriate methods on the C `LlmInferenceEngine_Session`
+/// to initialize, execute and terminate any MediaPipe `LlmInference` task.
 final class LlmTaskRunner {
+  typealias CLlmSession = UnsafeMutableRawPointer
   typealias CLlmEngine = UnsafeMutableRawPointer
 
-  /// The underlying C LLM engine created and managed by this `LlmTaskRunner`.
+  private var cLlmSession: CLlmSession?
   private var cLlmEngine: CLlmEngine?
-
-  /// Creates a new instance of `LlmTaskRunner` with the given model settings.
+  /// Creates a new instance of `LlmTaskRunner` with the given model settings and session config.
   ///
   /// - Parameters:
   ///   - modelSettings: C model settings of type `LlmModelSettings`.
-  /// - Throws: An error if the engine could not be initialized.
-  init(modelSettings: LlmModelSettings) throws {
+  ///   - sessionConfig: C session config of type `LlmSessionConfig`.
+  /// - Throws: An error if the session could not be initialized.
+  init(modelSettings: LlmModelSettings, sessionConfig: LlmSessionConfig) throws {
     var cErrorMessage: UnsafeMutablePointer<CChar>? = nil
-    guard
-      (withUnsafePointer(to: modelSettings) {
-        LlmInferenceEngine_CreateEngine($0, &self.cLlmEngine, &cErrorMessage)
-      }) == StatusCode.success.rawValue
-    else {
-      throw GenAiInferenceError.failedToInitializeEngine(
-        String(allocatedCErrorMessage: cErrorMessage))
+    let returnCodeCreateEngine = withUnsafePointer(to: modelSettings) {
+      LlmInferenceEngine_CreateEngine($0, &self.cLlmEngine, &cErrorMessage)
+    }
+    if returnCodeCreateEngine != 0 {
+      let errorMessage = cErrorMessage.flatMap { String(cString: $0) }
+      throw GenAiInferenceError.failedToInitializeEngine(errorMessage)
+    }
+    cErrorMessage = nil
+    let returnCodeCreateSession = withUnsafePointer(to: sessionConfig) {
+      LlmInferenceEngine_CreateSession(self.cLlmEngine, $0, &self.cLlmSession, &cErrorMessage)
+    }
+    if returnCodeCreateSession != 0 {
+      let errorMessage = cErrorMessage.flatMap { String(cString: $0) }
+      throw GenAiInferenceError.failedToInitializeSession(errorMessage)
     }
   }
 
-  /// Creates a new C LLM session from the current C engine and returns an `LlmSessionRunner`
-  /// that wraps around the newly created C session. The session runner is responsible for managing
-  /// its underlying C session.
-  ///
-  /// Note: On each invocation, this method returns a new instance of the session runner configured
-  /// to the values provided in the session config. Thus, if you provide the session config of a
-  /// currently active LLM session, this method will create and return a duplicate session runner
-  /// configured to the same values. The task runner does not keep track of the currently active
-  /// session runners.
+  /// Invokes the C inference engine with the given input text to generate an array of `String`
+  /// responses from the LLM.
   ///
   /// - Parameters:
-  ///   - sessionConfig: C session config of type `LlmSessionConfig` that configures how to execute
-  /// the model.
-  /// - Returns: A new instance of `LlmSessionRunner`.
-  /// - Throws: An error if the engine could not be initialized.
-  func createSessionRunner(sessionConfig: LlmSessionConfig) throws -> LlmSessionRunner {
-    var cErrorMessage: UnsafeMutablePointer<CChar>?
-    var cLlmSession: UnsafeMutableRawPointer?
+  ///   - inputText: A `String` that is used to query the LLM.
+  /// - Throws: An error if the LLM's response is invalid.
+  func predict(inputText: String) throws -> [String] {
+    /// No safe guards for the call since the C++ APIs only throw fatal errors.
+    /// `LlmInferenceEngine_Session_PredictSync()` will always return a `LlmResponseContext` if the
+    /// call completes.
+    var cErrorMessage: UnsafeMutablePointer<CChar>? = nil
+    var returnCode = inputText.withCString { cInputText in
+      LlmInferenceEngine_Session_AddQueryChunk(cLlmSession, cInputText, &cErrorMessage)
+    }
+    if returnCode != 0 {
+      let errorMessage = cErrorMessage.flatMap { String(cString: $0) }
+      throw GenAiInferenceError.failedToAddQueryToSession(inputText, errorMessage)
+    }
+    var responseContext = LlmInferenceEngine_Session_PredictSync(cLlmSession)
 
-    guard
-      (withUnsafePointer(to: sessionConfig) {
-        LlmInferenceEngine_CreateSession(cLlmEngine, $0, &cLlmSession, &cErrorMessage)
-      }) == StatusCode.success.rawValue,
-      let cLlmSession
-    else {
-      throw GenAiInferenceError.failedToInitializeSession(
-        String(allocatedCErrorMessage: cErrorMessage))
+    defer {
+      withUnsafeMutablePointer(to: &responseContext) {
+        LlmInferenceEngine_CloseResponseContext($0)
+      }
     }
 
-    let llmSessionRunner = LlmSessionRunner(cLlmSession: cLlmSession)
-    return llmSessionRunner
+    /// Throw an error if response is invalid.
+    guard let responseStrings = LlmTaskRunner.responseStrings(from: responseContext) else {
+      throw GenAiInferenceError.invalidResponse
+    }
+
+    return responseStrings
+  }
+
+  func predict(
+    inputText: String, progress: @escaping (_ partialResult: [String]?, _ error: Error?) -> Void,
+    completion: @escaping (() -> Void)
+  ) throws {
+    var cErrorMessage: UnsafeMutablePointer<CChar>? = nil
+    var returnCode = inputText.withCString { cInputText in
+      LlmInferenceEngine_Session_AddQueryChunk(cLlmSession, cInputText, &cErrorMessage)
+    }
+    if returnCode != 0 {
+      let errorMessage = cErrorMessage.flatMap { String(cString: $0) }
+      throw GenAiInferenceError.failedToAddQueryToSession(inputText, errorMessage)
+    }
+
+    /// `strdup(inputText)` prevents input text from being deallocated as long as callbacks are
+    /// being invoked. `CallbackInfo` takes care of freeing the memory of `inputText` when it is
+    /// deallocated.
+    let callbackInfo = CallbackInfo(
+      inputText: strdup(inputText), progress: progress, completion: completion)
+    let callbackContext = UnsafeMutableRawPointer(Unmanaged.passRetained(callbackInfo).toOpaque())
+
+    LlmInferenceEngine_Session_PredictAsync(cLlmSession, callbackContext) {
+      context, responseContext in
+      guard let cContext = context else {
+        return
+      }
+      guard let cResponse = responseContext?.pointee else {
+        return
+      }
+
+      /// `takeRetainedValue()` decrements the reference count incremented by `passRetained()`. Only
+      /// take a retained value if the LLM has finished generating responses to prevent the context
+      /// from being deallocated in between response generation.
+      let cCallbackInfo =
+        cResponse.done
+        ? Unmanaged<CallbackInfo>.fromOpaque(cContext).takeRetainedValue()
+        : Unmanaged<CallbackInfo>.fromOpaque(cContext).takeUnretainedValue()
+
+      if let responseStrings = LlmTaskRunner.responseStrings(from: cResponse) {
+        cCallbackInfo.progress(responseStrings, nil)
+      } else {
+        cCallbackInfo.progress(nil, GenAiInferenceError.invalidResponse)
+      }
+
+      LlmInferenceEngine_CloseResponseContext(responseContext)
+
+      /// Call completion callback if LLM has generated its last response.
+      if cResponse.done {
+        cCallbackInfo.completion()
+      }
+    }
+  }
+
+  func sizeInTokens(text: String) throws -> Int {
+    var cErrorMessage: UnsafeMutablePointer<CChar>?
+
+    let sizeInTokens = text.withCString { cText in
+      LlmInferenceEngine_Session_SizeInTokens(cLlmSession, cText, &cErrorMessage)
+    }
+
+    guard sizeInTokens > -1 else {
+      var errorMessage: String?
+      if let cErrorMessage {
+        errorMessage = String(cString: cErrorMessage)
+        free(cErrorMessage)
+      }
+
+      throw GenAiInferenceError.failedToComputeSizeInTokens(errorMessage)
+    }
+
+    return Int(sizeInTokens)
   }
 
   deinit {
+    LlmInferenceEngine_Session_Delete(cLlmSession)
     LlmInferenceEngine_Engine_Delete(cLlmEngine)
   }
 }
 
-extension String {
-  init?(allocatedCErrorMessage: UnsafeMutablePointer<CChar>?) {
-    guard let allocatedCErrorMessage else {
-      return nil
+extension LlmTaskRunner {
+  /// A wrapper class whose object will be used as the C++ callback context.
+  /// The progress and completion callbacks cannot be invoked without a context.
+  class CallbackInfo {
+    typealias ProgressCallback = (_ partialResult: [String]?, _ error: Error?) -> Void
+    typealias CompletionCallback = () -> Void
+
+    let inputText: UnsafeMutablePointer<CChar>?
+    let progress: ProgressCallback
+    let completion: CompletionCallback
+
+    init(
+      inputText: UnsafeMutablePointer<CChar>?, progress: @escaping (ProgressCallback),
+      completion: @escaping (CompletionCallback)
+    ) {
+      self.inputText = inputText
+      self.progress = progress
+      self.completion = completion
     }
 
-    self.init(cString: allocatedCErrorMessage)
-    free(allocatedCErrorMessage)
+    deinit {
+      free(inputText)
+    }
   }
 }
 
-enum StatusCode: Int {
-  case success = 0
+extension LlmTaskRunner {
+  private class func responseStrings(from responseContext: LlmResponseContext) -> [String]? {
+    guard let cResponseArray = responseContext.response_array else {
+      return nil
+    }
+
+    var responseStrings: [String] = []
+    for responseIndex in 0..<Int(responseContext.response_count) {
+      guard let cResponseString = cResponseArray[responseIndex] else {
+        return nil
+      }
+      responseStrings.append(String(cString: cResponseString))
+    }
+
+    return responseStrings
+  }
 }

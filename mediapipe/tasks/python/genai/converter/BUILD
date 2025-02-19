@@ -44,7 +44,6 @@ py_library(
         ":converter_factory",
         ":quantization_util",
         "//mediapipe/python:_framework_bindings",
-        "@mediapipe_pip_deps_numpy//:pkg",
     ],
 )
 
@@ -72,6 +71,7 @@ py_library(
 py_test(
     name = "quantization_util_test",
     srcs = ["quantization_util_test.py"],
+    srcs_version = "PY3",
     deps = [
         ":quantization_util",
     ],
@@ -89,6 +89,7 @@ py_library(
 py_test(
     name = "weight_bins_writer_test",
     srcs = ["weight_bins_writer_test.py"],
+    srcs_version = "PY3",
     deps = [
         ":weight_bins_writer",
     ],

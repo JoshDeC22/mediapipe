@@ -43,16 +43,21 @@ node {
   }
 }
 
-# Loads the file in the specified path as a resource.
+# Loads the file in the specified path into a blob.
 node {
-  calculator: "ResourceProviderCalculator"
-  input_side_packet: "RESOURCE_ID:model_path"
-  output_side_packet: "RESOURCE:model_resource"
+  calculator: "LocalFileContentsCalculator"
+  input_side_packet: "FILE_PATH:model_path"
+  output_side_packet: "CONTENTS:model_blob"
+  options: {
+    [mediapipe.LocalFileContentsCalculatorOptions.ext]: {
+      text_mode: false
+    }
+  }
 }
 
-# Converts the provided resource into a TF Lite model.
+# Converts the input blob into a TF Lite model.
 node {
   calculator: "TfLiteModelCalculator"
-  input_side_packet: "MODEL_RESOURCE:model_resource"
+  input_side_packet: "MODEL_BLOB:model_blob"
   output_side_packet: "MODEL:model"
 }

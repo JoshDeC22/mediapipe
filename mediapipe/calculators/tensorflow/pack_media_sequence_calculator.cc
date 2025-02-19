@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <cstdint>
-#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -105,8 +104,6 @@ namespace mpms = mediapipe::mediasequence;
 //   }
 // }
 namespace {
-constexpr int kMaxProtoBytes = std::numeric_limits<int>::max();
-
 uint8_t ConvertFloatToByte(const float float_value) {
   float clamped_value = std::clamp(0.0f, 1.0f, float_value);
   return static_cast<uint8_t>(clamped_value * 255.0 + .5f);
@@ -363,21 +360,14 @@ class PackMediaSequenceCalculator : public CalculatorBase {
     }
   }
 
-  absl::Status VerifySize(const PackMediaSequenceCalculatorOptions& options) {
-    if (!options.skip_large_sequences()) {
-      return absl::OkStatus();
-    }
-
-    const int max_bytes = (options.max_sequence_bytes() > 0)
-                              ? options.max_sequence_bytes()
-                              : kMaxProtoBytes;
-
+  absl::Status VerifySize() {
+    const int64_t MAX_PROTO_BYTES = 1073741823;
     std::string id = mpms::HasExampleId(*sequence_)
                          ? mpms::GetExampleId(*sequence_)
                          : "example";
-    RET_CHECK_LT(sequence_->ByteSizeLong(), max_bytes)
-        << "sequence '" << id << "' with " << sequence_->ByteSizeLong()
-        << " bytes would be more than " << max_bytes << " bytes.";
+    RET_CHECK_LT(sequence_->ByteSizeLong(), MAX_PROTO_BYTES)
+        << "sequence '" << id
+        << "' would be too many bytes to serialize after adding features.";
     return absl::OkStatus();
   }
 
@@ -389,7 +379,9 @@ class PackMediaSequenceCalculator : public CalculatorBase {
           options.reconcile_region_annotations(), sequence_.get()));
     }
 
-    RET_CHECK_OK(VerifySize(options));
+    if (options.skip_large_sequences()) {
+      RET_CHECK_OK(VerifySize());
+    }
     if (options.output_only_if_all_present()) {
       absl::Status status = VerifySequence();
       if (!status.ok()) {
@@ -424,26 +416,6 @@ class PackMediaSequenceCalculator : public CalculatorBase {
       if (!cc->Inputs().Tag(tag).IsEmpty()) {
         features_present_[tag] = true;
       }
-      if (absl::StartsWith(tag, kEncodedMediaStartTimestamp) &&
-          !cc->Inputs().Tag(tag).IsEmpty()) {
-        int64_t encoded_video_start_timestamp =
-            cc->Inputs().Tag(tag).Get<Timestamp>().Value();
-        std::string key =
-            std::string(absl::StripPrefix(tag, kEncodedMediaStartTimestamp));
-        key = absl::StripPrefix(key, "_");
-        mpms::SetClipEncodedMediaStartTimestamp(
-            key, encoded_video_start_timestamp, sequence_.get());
-      } else if (absl::StartsWith(tag, kEncodedMediaBytes) &&
-                 !cc->Inputs().Tag(tag).IsEmpty()) {
-        const std::string& encoded_video_bytes =
-            cc->Inputs().Tag(tag).Get<std::string>();
-        std::string key =
-            std::string(absl::StripPrefix(tag, kEncodedMediaBytes));
-        key = absl::StripPrefix(key, "_");
-        mpms::SetClipEncodedMediaBytes(key, encoded_video_bytes,
-                                       sequence_.get());
-      }
-
       if (absl::StartsWith(tag, kImageTag) &&
           !cc->Inputs().Tag(tag).IsEmpty()) {
         std::string key = "";

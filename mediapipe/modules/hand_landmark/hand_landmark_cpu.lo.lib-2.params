@@ -1,0 +1,5 @@
+/nologo
+/OUT:bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/hand_landmark_cpu.lo.lib
+/MACHINE:X64
+bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/_objs/hand_landmark_cpu/hand_landmark_cpu_linked.obj
+/ignore:4221

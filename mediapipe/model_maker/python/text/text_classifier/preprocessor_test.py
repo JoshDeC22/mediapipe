@@ -19,6 +19,7 @@ import tempfile
 from unittest import mock as unittest_mock
 
 from absl.testing import parameterized
+import mock
 import numpy as np
 import numpy.testing as npt
 import tensorflow as tf
@@ -157,7 +158,7 @@ class PreprocessorTest(tf.test.TestCase, parameterized.TestCase):
 
     # The second time running preprocessor, it should load from cache directly
     mock_stdout = io.StringIO()
-    with unittest_mock.patch('sys.stdout', mock_stdout):
+    with mock.patch('sys.stdout', mock_stdout):
       _ = bert_preprocessor.preprocess(dataset)
     self.assertEqual(
         mock_stdout.getvalue(),

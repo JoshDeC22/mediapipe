@@ -34,10 +34,9 @@
 
 namespace mediapipe::tasks::genai::xnn_utils {
 
-absl::StatusOr<std::unique_ptr<Llm>> CreateLlm(
+absl::StatusOr<std::unique_ptr<LlmBuilder>> CreateLlmBuilder(
     const LlmParams& llm_params,
     std::unique_ptr<RuntimeConfigs> runtime_configs,
-    std::unique_ptr<LlmWeightsLoader> weight_loader,
     std::unique_ptr<Sampler> sampler,
     odml::infra::proto::LlmModelType model_type) {
   std::unique_ptr<LlmBuilder> builder;
@@ -64,7 +63,7 @@ absl::StatusOr<std::unique_ptr<Llm>> CreateLlm(
       return absl::InvalidArgumentError(
           absl::StrCat("Unsupported model type: ", model_type));
   }
-  return Llm::CreateLlm(std::move(weight_loader), std::move(builder));
+  return builder;
 }
 
 }  // namespace mediapipe::tasks::genai::xnn_utils

@@ -22,7 +22,6 @@ namespace mediapipe::tasks::genai::llm_utils {
 odml::infra::proto::LlmParameters GetFalconRW1BParams();
 odml::infra::proto::LlmParameters GetGemma2BParams();
 odml::infra::proto::LlmParameters GetGemma7BParams();
-odml::infra::proto::LlmParameters GetGemma2_2BParams();
 odml::infra::proto::LlmParameters GetStablelm4E1T3BParams();
 odml::infra::proto::LlmParameters GetPhi2Params();
 

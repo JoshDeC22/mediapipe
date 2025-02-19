@@ -130,7 +130,6 @@ cc_library(
     deps = [
         ":hardware_buffer",
         "//mediapipe/framework:port",
-        "//mediapipe/framework/formats:shared_fd",
         "//mediapipe/gpu:gpu_buffer_storage",
     ],
 )
@@ -301,14 +300,10 @@ cc_test(
 
 cc_library(
     name = "unique_fd",
-    srcs = ["unique_fd.cc"],
     hdrs = ["unique_fd.h"],
     deps = [
-        "//mediapipe/framework/port:ret_check",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/log:absl_log",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -318,29 +313,6 @@ cc_test(
     deps = [
         ":unique_fd",
         "//mediapipe/framework/port:gtest_main",
-        "//mediapipe/framework/port:status_matchers",
-        "//mediapipe/util:fd_test_util",
-    ],
-)
-
-cc_library(
-    name = "shared_fd",
-    hdrs = ["shared_fd.h"],
-    deps = [
-        ":unique_fd",
-        "@com_google_absl//absl/status:statusor",
-    ],
-)
-
-cc_test(
-    name = "shared_fd_test",
-    srcs = ["shared_fd_test.cc"],
-    deps = [
-        ":shared_fd",
-        ":unique_fd",
-        "//mediapipe/framework/port:gtest_main",
-        "//mediapipe/framework/port:status_matchers",
-        "//mediapipe/util:fd_test_util",
     ],
 )
 
@@ -539,12 +511,7 @@ config_setting(
 cc_library(
     name = "tensor",
     srcs =
-        select({
-            "//mediapipe/gpu/webgpu:use_webgpu": [
-                "//mediapipe/gpu/webgpu:tensor_webgpu_texture_view.cc",
-            ],
-            "//conditions:default": [],
-        }) + [
+        [
             "tensor.cc",
             "tensor_ahwb.cc",
         ],
@@ -570,7 +537,6 @@ cc_library(
         "//conditions:default": [],
         # Option for vendor binaries to avoid linking libandroid.so.
         "//mediapipe/framework:android_no_jni": [],
-        "//mediapipe/gpu/webgpu:use_webgpu_emscripten": ["-sUSE_WEBGPU=1"],
     }),
     deps = [
         "//mediapipe/framework:memory_manager",
@@ -579,7 +545,6 @@ cc_library(
         "//mediapipe/framework/port:aligned_malloc_and_free",
         "//mediapipe/framework/port:ret_check",
         "//mediapipe/framework/port:status",
-        "//mediapipe/gpu/webgpu:webgpu_check",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
@@ -592,12 +557,6 @@ cc_library(
         "@com_google_absl//absl/synchronization",
     ] + select({
         "//mediapipe/gpu:disable_gpu": [],
-        "//mediapipe/gpu/webgpu:use_webgpu": [
-            "//mediapipe/gpu:gl_base",
-            "//mediapipe/gpu:gl_context",
-            "//mediapipe/gpu/webgpu:webgpu_service",
-            "//mediapipe/gpu/webgpu:webgpu_utils",
-        ],
         "//conditions:default": [
             "//mediapipe/gpu:gl_base",
             "//mediapipe/gpu:gl_context",
@@ -686,15 +645,5 @@ cc_test(
         ":tensor_ahwb_usage",
         "//mediapipe/framework/port:gtest_main",
         "//mediapipe/framework/port:status",
-    ],
-)
-
-cc_test(
-    name = "yuv_image_test",
-    srcs = ["yuv_image_test.cc"],
-    deps = [
-        ":yuv_image",
-        "//mediapipe/framework/port:gtest_main",
-        "@libyuv",
     ],
 )

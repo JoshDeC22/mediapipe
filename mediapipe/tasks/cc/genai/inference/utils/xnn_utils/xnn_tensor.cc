@@ -16,7 +16,6 @@
 
 #include <fcntl.h>
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -330,14 +329,11 @@ absl::Status Tensor::LoadFromBuffer(const void* buffer) {
 absl::Status Tensor::LoadFromVec(const std::vector<float>& data,
                                  bool exact_match) {
   AllocateBufferIfNeeded();
-  size_t load_size = data.size();
   if (exact_match) {
     RET_CHECK_EQ(ElementSize(num_elements), data.size() * sizeof(float));
-  } else {
-    load_size = std::min(data.size(), num_elements);
   }
 
-  memcpy(Data(), data.data(), load_size * sizeof(float));
+  memcpy(Data(), data.data(), data.size() * sizeof(float));
 
   return absl::OkStatus();
 }
@@ -387,7 +383,6 @@ std::shared_ptr<Tensor> Tensor::Transpose() {
   DimsType out_dims{dims.rbegin(), dims.rend()};
   auto result =
       std::make_shared<Tensor>(std::move(out_dims), datatype, is_sparse());
-  result->tag = tag;
   result->AllocateBufferIfNeeded();
   xnn_status s;
   const DimsType perm{1, 0};
@@ -518,7 +513,6 @@ std::shared_ptr<Tensor> QCTensor::Transpose() {
   DimsType out_dims{dims.rbegin(), dims.rend()};
   auto result = std::make_shared<QCTensor>(std::move(out_dims), 1 - dim_scale,
                                            datatype, is_sparse());
-  result->tag = tag;
   result->zero_point = zero_point;
   result->AllocateBufferIfNeeded();
   memcpy(result->scale_data.get(), scale_data.get(),

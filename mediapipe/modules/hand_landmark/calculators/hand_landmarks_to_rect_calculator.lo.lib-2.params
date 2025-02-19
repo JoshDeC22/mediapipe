@@ -1,0 +1,5 @@
+/nologo
+/OUT:bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/calculators/hand_landmarks_to_rect_calculator.lo.lib
+/MACHINE:X64
+bazel-out/x64_windows-opt/bin/mediapipe/modules/hand_landmark/calculators/_objs/hand_landmarks_to_rect_calculator/hand_landmarks_to_rect_calculator.obj
+/ignore:4221

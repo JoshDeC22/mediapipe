@@ -14,7 +14,6 @@
 
 #include "mediapipe/framework/scheduler.h"
 
-#include <functional>
 #include <memory>
 #include <queue>
 #include <utility>
@@ -22,7 +21,6 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/memory/memory.h"
-#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/executor.h"
@@ -38,10 +36,8 @@ namespace mediapipe {
 
 namespace internal {
 
-inline constexpr absl::string_view kDefaultQueueName = "default_queue";
-
 Scheduler::Scheduler(CalculatorGraph* graph)
-    : graph_(graph), shared_(), default_queue_(kDefaultQueueName, &shared_) {
+    : graph_(graph), shared_(), default_queue_(&shared_) {
   shared_.error_callback =
       std::bind(&CalculatorGraph::RecordError, graph_, std::placeholders::_1);
   default_queue_.SetIdleCallback(std::bind(&Scheduler::QueueIdleStateChanged,
@@ -94,7 +90,7 @@ absl::Status Scheduler::SetNonDefaultExecutor(const std::string& name,
                                              "be called after the scheduler "
                                              "has started";
   auto inserted = non_default_queues_.emplace(
-      name, absl::make_unique<SchedulerQueue>(name, &shared_));
+      name, absl::make_unique<SchedulerQueue>(&shared_));
   RET_CHECK(inserted.second)
       << "SetNonDefaultExecutor must be called only once for the executor \""
       << name << "\"";

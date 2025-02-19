@@ -22,9 +22,6 @@
 #ifndef MEDIAPIPE_GPU_CV_PIXEL_BUFFER_POOL_WRAPPER_H_
 #define MEDIAPIPE_GPU_CV_PIXEL_BUFFER_POOL_WRAPPER_H_
 
-#include <memory>
-#include <string>
-
 #include "CoreFoundation/CFBase.h"
 #include "absl/status/statusor.h"
 #include "mediapipe/gpu/cv_texture_cache_manager.h"
@@ -60,9 +57,6 @@ class CvPixelBufferPoolWrapper {
       const internal::GpuBufferSpec& spec);
 
  private:
-  int width_;
-  int height_;
-  GpuBufferFormat format_;
   CFHolder<CVPixelBufferPoolRef> pool_;
   int count_ = 0;
   CvTextureCacheManager* texture_caches_;

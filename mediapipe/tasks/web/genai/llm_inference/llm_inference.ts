@@ -110,8 +110,8 @@ const MAX_STORAGE_BUFFER_BINDING_SIZE_FOR_LLM = 524550144;
  * The LoRA model to be used for `generateResponse()` of a LLM Inference task.
  */
 export class LoraModel {
-  private static nextLoraModelId = 1;
-  readonly loraModelId: number; // Always a positive number.
+  private static nextLoraModelId = 0;
+  readonly loraModelId: number;
   constructor(readonly owner: LlmInference) {
     this.loraModelId = LoraModel.nextLoraModelId;
     LoraModel.nextLoraModelId++;
@@ -141,14 +141,6 @@ class Deferred<T> {
     this.resolve = resolve;
     this.reject = reject;
   }
-}
-
-/**
- * Small helper to round up to the nearest even number, except for n=1.
- */
-function roundUpToNearestEven(n: number): number {
-  if (n === 1) return 1;
-  return n + (n % 2);
 }
 
 /**
@@ -344,28 +336,32 @@ export class LlmInference extends TaskRunner {
       requiredLimits: {
         'maxStorageBufferBindingSize': MAX_STORAGE_BUFFER_BINDING_SIZE_FOR_LLM,
         'maxBufferSize': maxBufferSize,
-        'maxStorageBuffersPerShaderStage':
-          adapter.limits.maxStorageBuffersPerShaderStage,
       },
     };
 
     // These are only available through an origin trial or experimental flags on
     // Linux, so we attempt to enable it whenever that feature is detected, for
     // experimentation purposes, but log a warning when doing so.
-    const hasSubgroupsFeature = adapter.features.has(
-      'subgroups' as GPUFeatureName,
+    const hasOldSubgroupsFeature = adapter.features.has(
+      'chromium-experimental-subgroups',
     );
-    if (hasSubgroupsFeature) {
+    const hasNewSubgroupsFeature = adapter.features.has('subgroups');
+    if (hasOldSubgroupsFeature || hasNewSubgroupsFeature) {
       console.warn(
         'Experimental Chromium WGSL subgroup support detected. ' +
           'Enabling this feature in the inference engine.',
       );
-      const featuresList: GPUFeatureName[] = [
-        'shader-f16',
-        'subgroups' as GPUFeatureName,
-      ];
-      if (adapter.features.has('subgroups-f16' as GPUFeatureName)) {
-        featuresList.push('subgroups-f16' as GPUFeatureName);
+      const featuresList: GPUFeatureName[] = ['shader-f16'];
+      if (hasNewSubgroupsFeature) {
+        featuresList.push('subgroups' as unknown as GPUFeatureName);
+        if (adapter.features.has('subgroups-f16')) {
+          featuresList.push('subgroups-f16' as unknown as GPUFeatureName);
+        }
+      }
+      if (hasOldSubgroupsFeature) {
+        featuresList.push(
+          'chromium-experimental-subgroups' as unknown as GPUFeatureName,
+        );
       }
       deviceDescriptor.requiredFeatures = featuresList;
     }
@@ -518,15 +514,6 @@ export class LlmInference extends TaskRunner {
   }
 
   /**
-   * Returns whether the LlmInference instance is idle.
-   *
-   * @export
-   */
-  get isIdle(): boolean {
-    return !this.isProcessing && !this.resultDeferred;
-  }
-
-  /**
    * Performs LLM Inference on the provided text and waits
    * asynchronously for the response. Only one call to `generateResponse()` can
    * run at a time.
@@ -549,7 +536,7 @@ export class LlmInference extends TaskRunner {
    */
   generateResponse(
     text: string,
-    progressListener?: ProgressListener,
+    progressListener: ProgressListener,
   ): Promise<string>;
   /**
    * Performs LLM Inference on the provided text and waits
@@ -561,7 +548,7 @@ export class LlmInference extends TaskRunner {
    * @param loraModel The LoRA model to apply on the text generation.
    * @return The generated text result.
    */
-  generateResponse(text: string, loraModel?: LoraModel): Promise<string>;
+  generateResponse(text: string, loraModel: LoraModel): Promise<string>;
   /**
    * Performs LLM Inference on the provided text and waits
    * asynchronously for the response. Only one call to `generateResponse()` can
@@ -576,8 +563,8 @@ export class LlmInference extends TaskRunner {
    */
   generateResponse(
     text: string,
-    loraModel?: LoraModel,
-    progressListener?: ProgressListener,
+    loraModel: LoraModel,
+    progressListener: ProgressListener,
   ): Promise<string>;
   /** @export */
   generateResponse(
@@ -602,52 +589,44 @@ export class LlmInference extends TaskRunner {
   }
 
   /**
-   * Similar to `generateResponse()` but can return multiple responses for the
-   * given prompt if the task is initialized with a value for `numResponses`
-   * greater than 1.
+   * Similar with generateResponse() but returns multiple responses.
    *
    * @export
    * @param text The text to process.
-   * @return The generated results.
+   * @return The generated text result.
    */
   generateResponses(text: string): Promise<string[]>;
   /**
-   * Similar to `generateResponse()` but can return multiple responses for the
-   * given prompt if the task is initialized with a value for `numResponses`
-   * greater than 1.
+   * Similar with generateResponse() but returns multiple responses.
    *
    * @export
    * @param text The text to process.
    * @param progressListener A listener that will be triggered when the task has
    *     new partial response generated.
-   * @return The generated results.
+   * @return The generated text result.
    */
   generateResponses(
     text: string,
     progressListener: MultiResponseProgressListener,
   ): Promise<string[]>;
   /**
-   * Similar to `generateResponse()` but can return multiple responses for the
-   * given prompt if the task is initialized with a value for `numResponses`
-   * greater than 1.
+   * Similar with generateResponse() but returns multiple responses.
    *
    * @export
    * @param text The text to process.
    * @param loraModel The LoRA model to apply on the text generation.
-   * @return The generated results.
+   * @return The generated text result.
    */
   generateResponses(text: string, loraModel: LoraModel): Promise<string[]>;
   /**
-   * Similar to `generateResponse()` but can return multiple responses for the
-   * given prompt if the task is initialized with a value for `numResponses`
-   * greater than 1.
+   * Similar with generateResponse() but returns multiple responses.
    *
    * @export
    * @param text The text to process.
    * @param loraModel The LoRA model to apply on the text generation.
    * @param progressListener A listener that will be triggered when the task has
    *     new partial response generated.
-   * @return The generated results.
+   * @return The generated text result.
    */
   generateResponses(
     text: string,
@@ -746,51 +725,42 @@ export class LlmInference extends TaskRunner {
    * current LLM Inference task.
    *
    * @export
-   * @param modelAsset The URL to the model, Blob or the ArrayBuffer of the
-   *     model content.
+   * @param modelAsset The URL to the model or the ArrayBuffer of the model
+   *     content.
    * @return A loaded LoRA model.
    */
   async loadLoraModel(
-    modelAsset: string | Uint8Array | Blob,
+    modelAsset: string | Uint8Array,
   ): Promise<LoraModel> {
     if (this.isProcessing) {
       throw new Error('Cannot load LoRA model while loading or processing.');
     }
     this.isProcessing = true;
-    let wasmFileReference: WasmFileReference;
-    if (modelAsset instanceof Uint8Array) {
-      wasmFileReference = WasmFileReference.loadFromArray(
-        this.graphRunner.wasmModule,
-        modelAsset,
-      );
-    } else if (modelAsset instanceof Blob) {
-      wasmFileReference = await WasmFileReference.loadFromBlob(
-        this.graphRunner.wasmModule,
-        modelAsset,
-      );
-    } else {
-      wasmFileReference = await WasmFileReference.loadFromUrl(
-        this.graphRunner.wasmModule,
-        modelAsset,
-      );
-    }
+    const wasmFileReference =
+      modelAsset instanceof Uint8Array
+        ? WasmFileReference.loadFromArray(
+            this.graphRunner.wasmModule,
+            modelAsset,
+          )
+        : await WasmFileReference.loadFromUrl(
+            this.graphRunner.wasmModule,
+            modelAsset,
+          );
     const loraModel = new LoraModel(this);
-    const syntheticTimestamp = this.getSynctheticTimestamp();
     (
       this.graphRunner as unknown as LlmGraphRunner
     ).addWasmFileReferenceToStream(
       wasmFileReference,
       LORA_MODEL_REF_INPUT_STREAM,
-      syntheticTimestamp,
+      this.getSynctheticTimestamp(),
     );
     this.graphRunner.addUintToStream(
       loraModel.loraModelId,
       LORA_MODEL_ID_TO_LOAD_INPUT_STREAM,
-      syntheticTimestamp,
+      this.getSynctheticTimestamp(),
     );
     this.finishProcessing();
     wasmFileReference.free();
-    this.setLatestOutputTimestamp(syntheticTimestamp);
     this.isProcessing = false;
     return loraModel;
   }
@@ -862,20 +832,11 @@ export class LlmInference extends TaskRunner {
           stripLeadingWhitespace,
         );
         decodedText.forEach((text, index) => {
-          // TODO: Remove this when we no longer need to have an
-          // even number of responses in multi-output.
-          if (index < this.options.getNumResponses()) {
-            this.generationResults[index].push(text);
-          }
+          this.generationResults[index].push(text);
         });
         // Don't trigger the user progress listener if there are WebGPU errors.
         if (this.userProgressListener && this.wgpuErrors.length === 0) {
           if (this.isMultiResponseGeneration) {
-            // TODO: Remove this when we no longer need to have an
-            // even number of responses in multi-output.
-            if (decodedText.length > this.options.getNumResponses()) {
-              decodedText.pop();
-            }
             (this.userProgressListener as MultiResponseProgressListener)(
               decodedText,
               /* done= */ false,
@@ -1070,11 +1031,7 @@ export class LlmInference extends TaskRunner {
     llmGpuOptions.setWeightPath(LlmInference.LLM_MODEL_NAME);
     // Set seq batch size to 0 to use automated sequence batch search.
     llmGpuOptions.setSequenceBatchSize(0);
-    // TODO: Remove this when we no longer need to have an even
-    // number of responses in multi-output.
-    llmGpuOptions.setNumOutputHeads(
-      roundUpToNearestEven(this.options.getNumResponses()),
-    );
+    llmGpuOptions.setNumOutputHeads(this.options.getNumResponses());
     llmGpuOptions.setSamplerParams(this.options.getSamplerParams());
 
     const gpuModelInfo = new LlmGpuCalculatorOptions.GpuModelInfo();
@@ -1121,11 +1078,7 @@ export class LlmInference extends TaskRunner {
       'type.googleapis.com/odml.infra.proto.DetokenizerCalculatorOptions',
     );
     const detokenizerOptions = new DetokenizerCalculatorOptions();
-    // TODO: Remove this when we no longer need to have an even
-    // number of responses in multi-output.
-    detokenizerOptions.setNumOutputHeads(
-      roundUpToNearestEven(this.options.getNumResponses()),
-    );
+    detokenizerOptions.setNumOutputHeads(this.options.getNumResponses());
     // No need to set spm model, instead reuse TokenizerCalculator's side input.
     detokenizerOptions.addStopTokens('<eos>');
     detokenizerOptions.addStopTokens('<|endoftext|>');

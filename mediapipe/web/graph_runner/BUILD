@@ -113,7 +113,7 @@ mediapipe_ts_library(
 
 jasmine_node_test(
     name = "platform_utils_test",
-    srcs = [
+    deps = [
         ":platform_utils_test_lib",
     ],
 )

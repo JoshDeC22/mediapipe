@@ -33,8 +33,6 @@ py_test(
         "//mediapipe/tasks/python/components/containers:classification_result",
         "//mediapipe/tasks/python/core:base_options",
         "//mediapipe/tasks/python/test:test_utils",
-        "@mediapipe_pip_deps_absl_py//:pkg",
-        "@mediapipe_pip_deps_numpy//:pkg",
     ],
 )
 
@@ -52,7 +50,5 @@ py_test(
         "//mediapipe/tasks/python/components/containers:audio_data",
         "//mediapipe/tasks/python/core:base_options",
         "//mediapipe/tasks/python/test:test_utils",
-        "@mediapipe_pip_deps_absl_py//:pkg",
-        "@mediapipe_pip_deps_numpy//:pkg",
     ],
 )

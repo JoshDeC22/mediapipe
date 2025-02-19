@@ -20,7 +20,7 @@
   self = [super init];
   if (self) {
     _maxResults = -1;
-    _scoreThreshold = 0.0f;
+    _scoreThreshold = 0;
   }
   return self;
 }
@@ -34,7 +34,7 @@
   audioClassifierOptions.categoryDenylist = self.categoryDenylist;
   audioClassifierOptions.categoryAllowlist = self.categoryAllowlist;
   audioClassifierOptions.displayNamesLocale = self.displayNamesLocale;
-  audioClassifierOptions.audioClassifierStreamDelegate = self.audioClassifierStreamDelegate;
+  audioClassifierOptions.audioClassifierLiveStreamDelegate = self.audioClassifierLiveStreamDelegate;
 
   return audioClassifierOptions;
 }

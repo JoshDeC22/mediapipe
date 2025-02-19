@@ -15,13 +15,11 @@
 #include <vector>
 
 #include "absl/log/absl_log.h"
-#include "absl/status/statusor.h"
 #include "absl/strings/match.h"
-#include "absl/strings/str_cat.h"
 #include "mediapipe/framework/port/file_helpers.h"
 #include "mediapipe/framework/port/ret_check.h"
 #include "mediapipe/framework/port/singleton.h"
-#include "mediapipe/framework/port/status_builder.h"
+#include "mediapipe/framework/port/statusor.h"
 #include "mediapipe/util/android/asset_manager_util.h"
 #include "mediapipe/util/android/file/base/helpers.h"
 
@@ -29,11 +27,7 @@ namespace mediapipe {
 
 namespace {
 absl::StatusOr<std::string> PathToResourceAsFileInternal(
-    const std::string& path, bool shadow_copy) {
-  if (!shadow_copy) {
-    return absl::UnavailableError(absl::StrCat(
-        "Not copying asset '", path, "' due to `shadow_copy == false`"));
-  }
+    const std::string& path) {
   return Singleton<AssetManager>::get()->CachedFileFromAsset(path);
 }
 }  // namespace
@@ -71,8 +65,7 @@ absl::Status DefaultGetResourceContents(const std::string& path,
 }
 }  // namespace internal
 
-absl::StatusOr<std::string> PathToResourceAsFile(const std::string& path,
-                                                 bool shadow_copy) {
+absl::StatusOr<std::string> PathToResourceAsFile(const std::string& path) {
   // Return full path.
   if (absl::StartsWith(path, "/")) {
     return path;
@@ -80,7 +73,7 @@ absl::StatusOr<std::string> PathToResourceAsFile(const std::string& path,
 
   // Try to load a relative path or a base filename as is.
   {
-    auto status_or_path = PathToResourceAsFileInternal(path, shadow_copy);
+    auto status_or_path = PathToResourceAsFileInternal(path);
     if (status_or_path.ok()) {
       ABSL_LOG(INFO) << "Successfully loaded: " << path;
       return status_or_path;
@@ -93,7 +86,7 @@ absl::StatusOr<std::string> PathToResourceAsFile(const std::string& path,
     RET_CHECK(last_slash_idx != std::string::npos)
         << path << " doesn't have a slash in it";  // Make sure it's a path.
     auto base_name = path.substr(last_slash_idx + 1);
-    auto status_or_path = PathToResourceAsFileInternal(base_name, shadow_copy);
+    auto status_or_path = PathToResourceAsFileInternal(base_name);
     if (status_or_path.ok()) {
       ABSL_LOG(INFO) << "Successfully loaded: " << base_name;
       return status_or_path;

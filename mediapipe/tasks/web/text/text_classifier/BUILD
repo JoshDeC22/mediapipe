@@ -65,5 +65,5 @@ mediapipe_ts_library(
 
 jasmine_node_test(
     name = "text_classifier_test",
-    srcs = [":text_classifier_test_lib"],
+    deps = [":text_classifier_test_lib"],
 )

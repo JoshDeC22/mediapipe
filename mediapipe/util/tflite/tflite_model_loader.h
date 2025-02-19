@@ -22,7 +22,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "mediapipe/framework/api2/packet.h"
-#include "mediapipe/framework/resources.h"
 #include "tensorflow/lite/model_builder.h"
 
 namespace mediapipe {
@@ -35,14 +34,12 @@ using TfLiteModelPtr =
 class TfLiteModelLoader {
  public:
   // Returns a Packet containing a TfLiteModelPtr, pointing to a model loaded
-  // from the specified file path. If file at `path` exists and try_mmap is
-  // true, tries to load the model as memory mapped file. (This can be
-  // significantly faster than loading the tflite file into a buffer first.)
-  // If memory mapping is not available or fails, loads the model using
-  // `Resources` object. (Which can be customized per graph.)
+  // from the specified file path. If try_mmap is true, tries to load the model
+  // as memory mapped file if available. This can be significantly faster that
+  // loading the tflite file into a buffer first. If memory mapping is not
+  // available or fails, falls back to loading from buffer.
   static absl::StatusOr<api2::Packet<TfLiteModelPtr>> LoadFromPath(
-      const Resources& resources, const std::string& path,
-      bool try_mmap = false);
+      const std::string& path, bool try_mmap = false);
 };
 
 }  // namespace mediapipe

@@ -33,8 +33,6 @@ py_library(
     deps = [
         ":model_util",
         "//mediapipe/model_maker/python/core/data:dataset",
-        "@model_maker_pip_deps_numpy//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
@@ -44,8 +42,6 @@ py_library(
     deps = [
         ":quantization",
         "//mediapipe/model_maker/python/core/data:dataset",
-        "@model_maker_pip_deps_numpy//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
@@ -56,17 +52,12 @@ py_test(
         ":model_util",
         ":quantization",
         ":test_util",
-        "@model_maker_pip_deps_absl_py//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
 py_library(
     name = "file_util",
     srcs = ["file_util.py"],
-    deps = [
-        "@model_maker_pip_deps_requests//:pkg",
-    ],
 )
 
 py_test(
@@ -74,19 +65,12 @@ py_test(
     srcs = ["file_util_test.py"],
     data = [":testdata"],
     tags = ["requires-net:external"],
-    deps = [
-        ":file_util",
-        "@model_maker_pip_deps_absl_py//:pkg",
-        "@model_maker_pip_deps_requests//:pkg",
-    ],
+    deps = [":file_util"],
 )
 
 py_library(
     name = "hub_loader",
     srcs = ["hub_loader.py"],
-    deps = [
-        "@model_maker_pip_deps_tensorflow_hub//:pkg",
-    ],
 )
 
 py_test(
@@ -96,20 +80,16 @@ py_test(
     deps = [
         ":hub_loader",
         "//mediapipe/tasks/python/test:test_utils",
-        "@model_maker_pip_deps_absl_py//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
 py_library(
     name = "loss_functions",
     srcs = ["loss_functions.py"],
+    srcs_version = "PY3",
     deps = [
         ":file_util",
         ":model_util",
-        "@model_maker_pip_deps_numpy//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
-        "@model_maker_pip_deps_tf_models_official//:pkg",
     ],
 )
 
@@ -119,11 +99,7 @@ py_test(
     tags = [
         "requires-net:external",
     ],
-    deps = [
-        ":loss_functions",
-        "@model_maker_pip_deps_absl_py//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
-    ],
+    deps = [":loss_functions"],
 )
 
 ######################################################################
@@ -137,30 +113,20 @@ py_test(
 py_library(
     name = "metrics",
     srcs = ["metrics.py"],
-    deps = [
-        "@model_maker_pip_deps_tensorflow//:pkg",
-    ],
 )
 
 py_test(
     name = "metrics_test",
     srcs = ["metrics_test.py"],
-    deps = [
-        ":metrics",
-        "@model_maker_pip_deps_absl_py//:pkg",
-        "@model_maker_pip_deps_numpy//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
-    ],
+    deps = [":metrics"],
 )
 
 py_library(
     name = "quantization",
     srcs = ["quantization.py"],
+    srcs_version = "PY3",
     visibility = ["//visibility:public"],
-    deps = [
-        "//mediapipe/model_maker/python/core/data:dataset",
-        "@model_maker_pip_deps_tensorflow//:pkg",
-    ],
+    deps = ["//mediapipe/model_maker/python/core/data:dataset"],
 )
 
 py_test(
@@ -169,7 +135,5 @@ py_test(
     deps = [
         ":quantization",
         ":test_util",
-        "@model_maker_pip_deps_absl_py//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )

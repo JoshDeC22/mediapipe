@@ -62,5 +62,5 @@ mediapipe_ts_library(
 
 jasmine_node_test(
     name = "language_detector_test",
-    srcs = [":language_detector_test_lib"],
+    deps = [":language_detector_test_lib"],
 )

@@ -18,14 +18,12 @@
 #ifndef MEDIAPIPE_GPU_GL_TEXTURE_BUFFER_POOL_H_
 #define MEDIAPIPE_GPU_GL_TEXTURE_BUFFER_POOL_H_
 
-#include <cstdint>
-#include <memory>
+#include <utility>
+#include <vector>
 
 #include "absl/status/statusor.h"
-#include "absl/strings/str_format.h"
-#include "mediapipe/framework/port/ret_check.h"
+#include "absl/synchronization/mutex.h"
 #include "mediapipe/gpu/gl_texture_buffer.h"
-#include "mediapipe/gpu/gpu_buffer_format.h"
 #include "mediapipe/gpu/multi_pool.h"
 #include "mediapipe/gpu/reusable_pool.h"
 
@@ -55,11 +53,7 @@ class GlTextureBufferPool : public ReusablePool<GlTextureBuffer> {
 
   static absl::StatusOr<GlTextureBufferSharedPtr> CreateBufferWithoutPool(
       const internal::GpuBufferSpec& spec) {
-    std::unique_ptr<GlTextureBuffer> buffer = GlTextureBuffer::Create(spec);
-    RET_CHECK(buffer) << absl::StrFormat(
-        "Failed to create GL texture buffer: %d x %d, %d", spec.width,
-        spec.height, static_cast<uint32_t>(spec.format));
-    return buffer;
+    return GlTextureBuffer::Create(spec);
   }
 
  protected:

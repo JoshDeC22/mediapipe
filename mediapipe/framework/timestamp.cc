@@ -22,27 +22,29 @@
 
 namespace mediapipe {
 
+constexpr double Timestamp::kTimestampUnitsPerSecond;
+
 // In the following functions:
 // - The safe int type will check for overflow/underflow and other errors.
 // - The CHECK in the constructor will disallow special values.
-TimestampDiff Timestamp::operator-(Timestamp other) const {
+TimestampDiff Timestamp::operator-(const Timestamp other) const {
   ABSL_CHECK(IsRangeValue() && other.IsRangeValue())
       << "This timestamp is " << DebugString() << " and other was "
       << other.DebugString();
   TimestampBaseType tmp_base = timestamp_ - other.timestamp_;
   return TimestampDiff(tmp_base);
 }
-TimestampDiff TimestampDiff::operator+(TimestampDiff other) const {
+TimestampDiff TimestampDiff::operator+(const TimestampDiff other) const {
   TimestampBaseType tmp_base = timestamp_ + other.timestamp_;
   return TimestampDiff(tmp_base);
 }
-TimestampDiff TimestampDiff::operator-(TimestampDiff other) const {
+TimestampDiff TimestampDiff::operator-(const TimestampDiff other) const {
   TimestampBaseType tmp_base = timestamp_ - other.timestamp_;
   return TimestampDiff(tmp_base);
 }
 
 // Clamp the addition to the range [Timestamp::Min(), Timestamp::Max()].
-Timestamp Timestamp::operator+(TimestampDiff offset) const {
+Timestamp Timestamp::operator+(const TimestampDiff offset) const {
   ABSL_CHECK(IsRangeValue()) << "Timestamp is: " << DebugString();
   TimestampBaseType offset_base(offset.Value());
   if (offset_base >= TimestampBaseType(0)) {
@@ -59,18 +61,18 @@ Timestamp Timestamp::operator+(TimestampDiff offset) const {
   }
   return Timestamp(timestamp_ + offset_base);
 }
-Timestamp Timestamp::operator-(TimestampDiff offset) const {
+Timestamp Timestamp::operator-(const TimestampDiff offset) const {
   return *this + -offset;
 }
-Timestamp TimestampDiff::operator+(Timestamp timestamp) const {
+Timestamp TimestampDiff::operator+(const Timestamp timestamp) const {
   return timestamp + *this;
 }
 
-Timestamp Timestamp::operator+=(TimestampDiff other) {
+Timestamp Timestamp::operator+=(const TimestampDiff other) {
   *this = *this + other;
   return *this;
 }
-Timestamp Timestamp::operator-=(TimestampDiff other) {
+Timestamp Timestamp::operator-=(const TimestampDiff other) {
   *this = *this - other;
   return *this;
 }

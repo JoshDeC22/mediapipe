@@ -15,18 +15,18 @@
 #include "mediapipe/framework/calculator_context.h"
 
 #include <memory>
-#include <string>
 
 // TODO: Move protos in another CL after the C++ code migration.
-#include "absl/strings/ascii.h"
-#include "absl/strings/string_view.h"
 #include "mediapipe/framework/calculator.pb.h"
+#include "mediapipe/framework/calculator_context_manager.h"
 #include "mediapipe/framework/calculator_state.h"
+#include "mediapipe/framework/output_stream_manager.h"
+#include "mediapipe/framework/output_stream_shard.h"
+#include "mediapipe/framework/port/canonical_errors.h"
 #include "mediapipe/framework/port/gmock.h"
 #include "mediapipe/framework/port/gtest.h"
 #include "mediapipe/framework/port/parse_text_proto.h"
 #include "mediapipe/framework/port/status_matchers.h"
-#include "mediapipe/framework/resources.h"
 #include "mediapipe/framework/testdata/night_light_calculator.pb.h"
 #include "mediapipe/framework/testdata/sky_light_calculator.pb.h"
 #include "mediapipe/framework/tool/tag_map_helper.h"
@@ -150,32 +150,6 @@ TEST(CalculatorTest, GetOptions) {
   // Get a proto3 options protobuf::Any from Node::node_options.
   EXPECT_EQ(cc_3->Options<SkyLightCalculatorOptions>().sky_color(),
             "light_blue");
-}
-
-TEST(CalculatorContextTest, CanLoadResourcesThroughCalculatorContext) {
-  mediapipe::CalculatorGraphConfig config =
-      ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(R"pb(
-        node {
-          calculator: "NightLightCalculator"
-          input_side_packet: "input_value"
-          output_stream: "values"
-          options {
-            [mediapipe.NightLightCalculatorOptions.ext] {
-              base_timestamp: 123
-              output_header: PASS_HEADER
-              jitter: 0.123
-            }
-          }
-        })pb");
-
-  auto calculator_state = MakeCalculatorState(config.node(0), 0);
-  auto cc = MakeCalculatorContext(calculator_state.get());
-
-  MP_ASSERT_OK_AND_ASSIGN(
-      std::unique_ptr<mediapipe::Resource> data,
-      cc->GetResources().Get(
-          "mediapipe/framework/testdata/resource_calculator.data"));
-  EXPECT_EQ(data->ToStringView(), "File system calculator contents\n");
 }
 
 }  // namespace test_ns

@@ -47,7 +47,6 @@ py_library(
         "//mediapipe/python:_framework_bindings",
         "//mediapipe/tasks/python/core:base_options",
         "//mediapipe/tasks/python/vision:hand_landmarker",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
@@ -65,8 +64,6 @@ py_test(
         ":dataset",
         "//mediapipe/tasks/python/test:test_utils",
         "//mediapipe/tasks/python/vision:hand_landmarker",
-        "@model_maker_pip_deps_absl_py//:pkg",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
@@ -106,7 +103,6 @@ py_library(
         "//mediapipe/model_maker/python/core/utils:loss_functions",
         "//mediapipe/model_maker/python/core/utils:model_util",
         "//mediapipe/tasks/python/metadata/metadata_writers:metadata_writer",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
@@ -135,7 +131,6 @@ py_library(
     deps = [
         "//mediapipe/tasks/python/metadata/metadata_writers:metadata_writer",
         "//mediapipe/tasks/python/metadata/metadata_writers:model_asset_bundle_utils",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
@@ -157,7 +152,6 @@ py_test(
         ":model_options",
         "//mediapipe/model_maker/python/core/utils:test_util",
         "//mediapipe/tasks/python/test:test_utils",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
@@ -169,7 +163,6 @@ py_test(
         ":metadata_writer",
         "//mediapipe/tasks/python/metadata/metadata_writers:metadata_writer",
         "//mediapipe/tasks/python/test:test_utils",
-        "@model_maker_pip_deps_tensorflow//:pkg",
     ],
 )
 
@@ -177,9 +170,7 @@ py_binary(
     name = "gesture_recognizer_demo",
     srcs = ["gesture_recognizer_demo.py"],
     data = [":testdata"],
+    python_version = "PY3",
     tags = ["requires-net:external"],
-    deps = [
-        ":gesture_recognizer_import",
-        "@model_maker_pip_deps_absl_py//:pkg",
-    ],
+    deps = [":gesture_recognizer_import"],
 )

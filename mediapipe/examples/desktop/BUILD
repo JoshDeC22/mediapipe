@@ -34,6 +34,7 @@ cc_library(
         "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/strings",
     ],
+    alwayslink=1,
 )
 
 cc_library(
@@ -81,4 +82,31 @@ cc_library(
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/log:absl_log",
     ],
+)
+
+cc_binary(
+    name="librun_graph_main.dll",
+    deps=[
+        ":demo_run_graph_main",
+        "//mediapipe/graphs/hand_tracking:mobile_calculators",
+        "//mediapipe/calculators/core:packet_presence_calculator",
+    ],
+    data=[
+        "//mediapipe/modules/hand_landmark:hand_landmark_full.tflite",
+        "//mediapipe/modules/palm_detection:palm_detection_full.tflite",
+    ],
+    linkshared=1
+)
+
+cc_library(
+    name="librun_graph_main",
+    srcs=["run_graph_main.cc"],
+    hdrs=["run_graph_main.h"],
+    deps=[
+        ":demo_run_graph_main",
+        "//mediapipe/graphs/hand_tracking:mobile_calculators",
+        "//mediapipe/calculators/core:packet_presence_calculator",
+    ],
+    visibility = ["//visibility:public"],
+    linkstatic = 1,
 )

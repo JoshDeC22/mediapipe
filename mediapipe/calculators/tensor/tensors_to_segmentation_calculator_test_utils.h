@@ -15,14 +15,13 @@
 #ifndef MEDIAPIPE_CALCULATORS_TENSOR_TENSORS_TO_SEGMENTATION_CALCULATOR_TEST_UTILS_H_
 #define MEDIAPIPE_CALCULATORS_TENSOR_TENSORS_TO_SEGMENTATION_CALCULATOR_TEST_UTILS_H_
 
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "mediapipe/calculators/tensor/tensors_to_segmentation_calculator.pb.h"
 #include "mediapipe/framework/calculator.pb.h"
-#include "mediapipe/framework/calculator_framework.h"
-#include "mediapipe/framework/formats/tensor.h"
 
 namespace mediapipe {
 namespace tensors_to_segmentation_utils {
@@ -38,11 +37,7 @@ std::vector<float> MakeRedAlphaMatrix(const std::vector<float>& values);
 mediapipe::CalculatorGraphConfig CreateGraphConfigForTest(
     bool test_gpu,
     const mediapipe::TensorsToSegmentationCalculatorOptions::Activation&
-        activation,
-    bool use_single_tensor);
-
-absl::Status AddTensorInput(Tensor tensor, bool use_single_tensor,
-                            CalculatorGraph& graph);
+        activation);
 
 struct FormattingTestCase {
   std::string test_name;
@@ -55,7 +50,6 @@ struct FormattingTestCase {
   int cols_new = 1;
   int channels = 1;
   double max_abs_diff = 1e-7;
-  bool use_single_tensor = false;
 };
 }  // namespace tensors_to_segmentation_utils
 }  // namespace mediapipe
