@@ -84,11 +84,12 @@ cc_library(
 )
 
 cc_binary(
+    target_compatible_with = [
+        "@platforms//os:windows",
+    ],
     name="librun_graph_main.dll",
     deps=[
-        ":demo_run_graph_main",
-        "//mediapipe/graphs/hand_tracking:mobile_calculators",
-        "//mediapipe/calculators/core:packet_presence_calculator",
+        ":librun_graph_main",
     ],
     data=[
         "//mediapipe/modules/hand_landmark:hand_landmark_full.tflite",
@@ -98,14 +99,19 @@ cc_binary(
 )
 
 cc_library(
+    target_compatible_with = [
+        "@platforms//os:windows",
+    ],
     name="librun_graph_main",
-    srcs=["run_graph_main.cc"],
-    hdrs=["run_graph_main.h"],
+    srcs=["libhand_main.cc"],
+    hdrs=["libhand_main.h"],
     deps=[
         ":demo_run_graph_main",
+        "//mediapipe/modules/hand_landmark:hand_landmark_tracking_cpu",
         "//mediapipe/graphs/hand_tracking:mobile_calculators",
         "//mediapipe/calculators/core:packet_presence_calculator",
     ],
+    defines = ["COMPILING_DLL=1"],
     visibility = ["//visibility:public"],
-    linkstatic = 1,
+    alwayslink = 1,
 )
