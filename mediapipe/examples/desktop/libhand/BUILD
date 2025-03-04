@@ -30,12 +30,12 @@ cc_binary(
 cc_binary(
     target_compatible_with = [
         "@platforms//os:linux",
-        name = "libhand.so",
-        deps = [":libhand_linux"],
-        data = BIN_DATA,
-        linkopts = ["-Wl,-soname,libhand.so"],
-        linkshared = 1,
-    ]
+    ],
+    name = "libhand.so",
+    deps = [":libhand_linux"],
+    data = BIN_DATA,
+    linkopts = ["-Wl,-soname,libhand.so"],
+    linkshared = 1,
 )
 
 # Mac DYLIB
@@ -44,7 +44,7 @@ cc_binary(
         "@platforms//os:macos",
     ],
     name = "libhand.dylib",
-    deps = ":libhand_mac",
+    deps = [":libhand_mac"],
     data = BIN_DATA,
     linkopts = ["-Wl,-install_name,@rpath/libhand.dylib"],
     linkshared = 1,
